@@ -54,13 +54,16 @@ printf '%s\n' \
   'Maintainer: sendreq <mkst@duck.com>' \
   'Description: Desktop API workspace for REST, WebSocket, and gRPC' \
   > "$deb/DEBIAN/control"
-dpkg-deb --root-owner-group --build "$deb" \
+# The release artifact will be compressed again by neither GitHub Artifacts nor
+# Releases. gzip level 1 is much faster than the default xz compression while
+# retaining a conventional DEB payload.
+dpkg-deb --root-owner-group -Zgzip -z1 --build "$deb" \
   "$output/sendreq-$version-linux-amd64.deb"
 
 rpmTop="$workspace/rpmbuild"
 install -d "$rpmTop/BUILD" "$rpmTop/BUILDROOT" "$rpmTop/RPMS" \
   "$rpmTop/SOURCES" "$rpmTop/SPECS" "$rpmTop/SRPMS"
-tar -C "$workspace" -czf "$rpmTop/SOURCES/sendreq-$version.tar.gz" \
+tar -C "$workspace" -I 'gzip -1' -cf "$rpmTop/SOURCES/sendreq-$version.tar.gz" \
   "sendreq-$version"
 cp packaging/linux/sendreq.spec "$rpmTop/SPECS/sendreq.spec"
 rpmbuild --define "_topdir $rpmTop" --define "sendreq_version $version" \

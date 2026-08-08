@@ -33,4 +33,5 @@ hdiutil create \
   -srcfolder "$stage/image" \
   -ov \
   -format UDZO \
+  -imagekey zlib-level=1 \
   "$output/sendreq-$version-macos-x64.dmg"

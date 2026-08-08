@@ -17,6 +17,12 @@ on:
 permissions:
   contents: read
 
+# Avoid duplicate release builds competing for the same tag while preserving a
+# running release verification once it has started.
+concurrency:
+  group: desktop-packages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   checks:
     name: Analyze and test
@@ -68,13 +74,16 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          choco install innosetup wixtoolset --yes --no-progress --limit-output
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
-          if (-not (Test-Path $compiler)) {
-            throw "Inno Setup compiler was not found at '$compiler'."
+          $wixCompiler = Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not (Test-Path $compiler) -or -not $wixCompiler) {
+            choco install innosetup wixtoolset --yes --no-progress --limit-output
+            $wixCompiler = Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction SilentlyContinue |
+              Select-Object -First 1
           }
-          if (-not (Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1)) {
-            throw 'WiX candle.exe was not found after installation.'
+          if (-not (Test-Path $compiler) -or -not $wixCompiler) {
+            throw 'Inno Setup or WiX candle.exe was not found after provisioning.'
           }
       - name: Package Windows installer and portable ZIP
         shell: pwsh
@@ -96,7 +105,9 @@ jobs:
             throw "Expected installer '$installer' was not produced."
           }
           $portable = Join-Path $output "sendreq-$version-windows-x64.zip"
-          Compress-Archive -Path "$bundle\*" -DestinationPath $portable -CompressionLevel Optimal
+          # Flutter bundles already contain compressed assets. Fastest avoids
+          # spending runner time recompressing them before release upload.
+          Compress-Archive -Path "$bundle\*" -DestinationPath $portable -CompressionLevel Fastest
 
           $wixBin = (Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction Stop | Select-Object -First 1).Directory.FullName
           $wixWork = Join-Path $env:RUNNER_TEMP 'sendreq-wix'
@@ -156,6 +167,7 @@ jobs:
           path: dist/windows/*
           if-no-files-found: error
           retention-days: 30
+          compression-level: 0
 
   macos:
     name: macOS x64 DMG
@@ -196,6 +208,7 @@ jobs:
           path: dist/macos/*
           if-no-files-found: error
           retention-days: 30
+          compression-level: 0
 
   linux:
     name: Linux x64 DEB and RPM
@@ -240,6 +253,7 @@ jobs:
           path: dist/linux/*
           if-no-files-found: error
           retention-days: 30
+          compression-level: 0
 
   release:
     name: Publish desktop release assets
