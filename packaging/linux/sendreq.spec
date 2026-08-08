@@ -14,7 +14,8 @@ sendreq is a local-first desktop API workspace for REST, WebSocket, and gRPC.
 
 %install
 rm -rf %{buildroot}
-cp -a usr %{buildroot}/
+install -d %{buildroot}/usr
+cp -a usr/. %{buildroot}/usr/
 
 %files
 /usr/bin/sendreq

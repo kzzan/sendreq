@@ -83,10 +83,12 @@ jobs:
           $wixWork = Join-Path $env:RUNNER_TEMP 'sendreq-wix'
           New-Item -ItemType Directory -Force -Path $wixWork | Out-Null
           $harvested = Join-Path $wixWork 'sendreq_files.wxs'
-          & (Join-Path $wixBin 'heat.exe') dir $bundle -cg SendreqFiles -dr INSTALLFOLDER -gg -srd -sfrag -var var.SourceDir -out $harvested
+          & (Join-Path $wixBin 'heat.exe') dir $bundle -cg SendreqFiles -dr INSTALLFOLDER -gg -srd -sfrag -scom -sreg -var var.SourceDir -out $harvested
           if ($LASTEXITCODE -ne 0) {
             throw "WiX heat failed with exit code $LASTEXITCODE."
           }
+          (Get-Content -Raw $harvested).Replace('<Component ', '<Component Win64="yes" ') |
+            Set-Content -Encoding utf8 $harvested
           $productObject = Join-Path $wixWork 'sendreq.wixobj'
           $filesObject = Join-Path $wixWork 'sendreq_files.wixobj'
           & (Join-Path $wixBin 'candle.exe') "-dSourceDir=$bundle" "-dProductVersion=$version" -out $productObject installer/windows/sendreq.wxs
