@@ -11,22 +11,33 @@ sendreq 是面向开发与测试团队的桌面 API 工作台。它把请求编�
 - **本地协作产物**：从响应快照生成 Markdown 接口文档；提供 Quick Mock 以便本地验证接口响应。
 - **本地优先存储**：工作区、环境和历史保存在系统应用数据目录；文档与 OpenAPI 默认导出到 `Documents/sendreq`，也可在设置中自定义目录。
 
-## Windows 安装
+## 桌面安装包
 
-每个正式版本都会在 GitHub Releases 提供以下文件：
+每个正式版本都会在 GitHub Releases 提供以下 x64 桌面包及对应 SHA-256 文件：
 
-- `sendreq-<version>-windows-x64-setup.exe`：Windows x64 安装程序，普通账户可直接安装。
-- 同名 `.sha256`：安装包 SHA-256 校验和。
+- `sendreq-<version>-windows-x64-setup.exe`：Windows 安装程序，普通账户可直接安装。
+- `sendreq-<version>-windows-x64.zip`：Windows 便携版。解压到任意可写目录后直接运行 `sendreq.exe`，无需安装。
+- `sendreq-<version>-macos-x64.dmg`：macOS Intel DMG。挂载后将 `sendreq.app` 拖入 Applications。
+- `sendreq-<version>-linux-amd64.deb`：Debian、Ubuntu 及兼容发行版安装包。
+- `sendreq-<version>-linux-x86_64.rpm`：Fedora、RHEL、openSUSE 及兼容发行版安装包。
 
-下载后可用 PowerShell 校验文件完整性：
+下载后先用与平台对应的 `.sha256` 文件校验完整性。Windows 可使用 PowerShell：
 
 ```powershell
 Get-FileHash .\sendreq-<version>-windows-x64-setup.exe -Algorithm SHA256
 ```
 
-将输出的哈希与 Release 中 `.sha256` 文件的值比较一致后，运行安装程序即可。安装完成后可从开始菜单启动 sendreq，也可通过 Windows 设置卸载。
+Linux 安装命令：
 
-当前发布流程会在 GitHub 的 Windows Runner 上完成依赖安装、静态检查、完整测试、Release 构建、安装包生成，以及“静默安装 -> 启动应用 -> 卸载 -> 文件校验”的验证。上述所有门禁成功后，才会创建或更新 GitHub Release。
+```bash
+sudo apt install ./sendreq-<version>-linux-amd64.deb
+# 或
+sudo rpm -Uvh ./sendreq-<version>-linux-x86_64.rpm
+```
+
+Windows 安装后可从开始菜单启动 sendreq，也可通过 Windows 设置卸载。macOS DMG 当前未配置 Apple Developer ID 签名和公证，因此 Gatekeeper 可能要求用户在系统设置中明确允许首次启动。
+
+当前发布流程会在 GitHub 的 Windows、macOS、Linux Runner 上分别完成静态检查、完整测试、Release 构建和平台包验证。Windows 安装程序执行“静默安装 -> 启动应用 -> 卸载 -> 文件校验”，便携 ZIP 执行“解压 -> 启动 -> 文件校验”；DMG 执行挂载与应用包结构检查；DEB/RPM 执行包元数据与已打包可执行文件检查。所有门禁成功后，才会创建或更新 GitHub Release。
 
 > Windows SmartScreen 的信誉提示取决于代码签名证书和下载信誉。仓库尚未配置代码签名证书时，安装包功能已通过自动安装验证，但仍可能显示该系统级提示。
 
@@ -39,7 +50,7 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-`Windows CI and release` 工作流只接受 `vX.Y.Z` 形式且与 `pubspec.yaml` 主版本完全一致的标签。任一构建、测试、安装或启动校验失败时，工作流失败，Release 不会发布不完整的安装包。
+`Desktop packages and release` 工作流只接受 `vX.Y.Z` 形式且与 `pubspec.yaml` 主版本完全一致的标签。任一平台构建、测试、打包或验证失败时，工作流失败，Release 不会发布不完整的桌面包。
 
 ## 本地开发
 

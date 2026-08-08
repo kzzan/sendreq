@@ -14,9 +14,9 @@
 
 ## 发布约定
 
-推送与 `pubspec.yaml` 版本一致的 `vX.Y.Z` 标签会启动 Windows 发布工作流。工作流依次执行静态检查、完整测试、Windows Release 构建、安装程序编译、静默安装、进程启动、安装文件哈希比对和卸载验证；全部成功后才创建 GitHub Release。
+推送与 `pubspec.yaml` 版本一致的 `vX.Y.Z` 标签会启动跨平台发布工作流。Windows、macOS、Linux 分别执行静态检查、完整测试、Release 构建和平台包验证；只有三条构建线全部成功后才创建 GitHub Release。
 
-Release 提供 x64 Inno Setup 安装程序及其 SHA-256 校验和。准确的标签命令与安装说明见仓库 README。
+Release 提供 Windows x64 Inno Setup 安装程序与便携 ZIP、macOS x64 DMG、Linux x64 DEB 和 RPM，以及每个资产的 SHA-256 校验和。Windows 会实际安装、启动并卸载；ZIP 会解压并启动；DMG 会挂载并检查应用包；DEB/RPM 会检查包元数据和可执行文件。准确的标签命令与安装说明见仓库 README。
 
 ## 协议验收
 

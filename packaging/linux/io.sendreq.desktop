@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=sendreq
+Comment=Desktop API workspace
+Exec=sendreq %U
+Icon=sendreq
+Terminal=false
+Categories=Development;Network;
+StartupNotify=true

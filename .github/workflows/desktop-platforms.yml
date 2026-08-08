@@ -1,4 +1,4 @@
-name: Windows CI and release
+name: Desktop packages and release
 
 on:
   push:
@@ -9,45 +9,33 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  verify-package-and-release:
-    name: Verify, package, and release Windows installer
+  windows:
+    name: Windows x64 installer and portable ZIP
     runs-on: windows-2022
     timeout-minutes: 45
 
     steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-
       - name: Verify release tag matches application version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $versionLine = (Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line
-          $version = ($versionLine -replace '^version:\s*', '').Split('+')[0].Trim()
-          $tag = '${{ github.ref_name }}'
-          if ($tag -ne "v$version") {
-            throw "Release tag '$tag' must match pubspec version 'v$version'."
+          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line -replace '^version:\s*', '').Split('+')[0].Trim()
+          if ('${{ github.ref_name }}' -ne "v$version") {
+            throw "Release tag '${{ github.ref_name }}' must match pubspec version 'v$version'."
           }
-
-      - name: Fetch Dart dependencies
-        run: flutter pub get
-
-      - name: Analyze source
-        run: flutter analyze
-
-      - name: Run test suite
+      - run: flutter pub get
+      - run: flutter analyze
+      - name: Run full test suite
         run: flutter test
-
       - name: Build Windows release bundle
         shell: pwsh
         run: |
@@ -57,7 +45,6 @@ jobs:
           if (-not (Test-Path build/windows/x64/runner/Release/sendreq.exe)) {
             throw 'Flutter did not produce build/windows/x64/runner/Release/sendreq.exe.'
           }
-
       - name: Install Inno Setup compiler
         shell: pwsh
         run: |
@@ -67,14 +54,11 @@ jobs:
           if (-not (Test-Path $compiler)) {
             throw "Inno Setup compiler was not found at '$compiler'."
           }
-
-      - name: Build Windows installer and checksum
-        id: package
+      - name: Package Windows installer and portable ZIP
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $versionLine = (Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line
-          $version = ($versionLine -replace '^version:\s*', '').Split('+')[0].Trim()
+          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line -replace '^version:\s*', '').Split('+')[0].Trim()
           $bundle = (Resolve-Path 'build/windows/x64/runner/Release').Path
           $output = Join-Path $PWD 'dist/windows'
           New-Item -ItemType Directory -Force -Path $output | Out-Null
@@ -89,38 +73,159 @@ jobs:
           if (-not (Test-Path $installer)) {
             throw "Expected installer '$installer' was not produced."
           }
-          $checksum = Get-FileHash -Algorithm SHA256 $installer
-          "$($checksum.Hash.ToLowerInvariant()) *$([IO.Path]::GetFileName($installer))" |
-            Set-Content -Encoding ascii -NoNewline ("$installer.sha256")
-          "installer=$installer" >> $env:GITHUB_OUTPUT
-
+          $portable = Join-Path $output "sendreq-$version-windows-x64.zip"
+          Compress-Archive -Path "$bundle\*" -DestinationPath $portable -CompressionLevel Optimal
+          foreach ($asset in @($installer, $portable)) {
+            $checksum = Get-FileHash -Algorithm SHA256 $asset
+            "$($checksum.Hash.ToLowerInvariant()) *$([IO.Path]::GetFileName($asset))" |
+              Set-Content -Encoding ascii -NoNewline ("$asset.sha256")
+          }
       - name: Verify installer can install, launch, and uninstall
         shell: pwsh
         run: |
+          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line -replace '^version:\s*', '').Split('+')[0].Trim()
           ./tool/verify_windows_installer.ps1 `
             -BundleDirectory build/windows/x64/runner/Release `
-            -InstallerPath '${{ steps.package.outputs.installer }}'
-
-      - name: Upload Windows installer artifact
-        uses: actions/upload-artifact@v4
+            -InstallerPath "dist/windows/sendreq-$version-windows-x64-setup.exe"
+      - name: Verify portable ZIP can extract and launch
+        shell: pwsh
+        run: |
+          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line -replace '^version:\s*', '').Split('+')[0].Trim()
+          ./tool/verify_windows_portable_zip.ps1 `
+            -BundleDirectory build/windows/x64/runner/Release `
+            -ZipPath "dist/windows/sendreq-$version-windows-x64.zip"
+      - uses: actions/upload-artifact@v4
         with:
-          name: sendreq-windows-x64-${{ github.sha }}
-          path: |
-            dist/windows/*.exe
-            dist/windows/*.sha256
+          name: release-windows
+          path: dist/windows/*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Publish GitHub Release
+  macos:
+    name: macOS x64 DMG
+    runs-on: macos-13
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Verify release tag matches application version
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
+          test "${{ github.ref_name }}" = "v$version"
+      - run: flutter pub get
+      - run: flutter analyze
+      - name: Run full test suite
+        run: flutter test
+      - name: Build macOS release bundle
+        run: |
+          flutter build macos --release
+          test -x build/macos/Build/Products/Release/sendreq.app/Contents/MacOS/sendreq
+      - name: Package and verify macOS DMG
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
+          mkdir -p dist/macos
+          ./tool/package_macos_dmg.sh \
+            --app build/macos/Build/Products/Release/sendreq.app \
+            --version "$version" \
+            --output dist/macos
+          ./tool/verify_macos_dmg.sh \
+            --dmg "dist/macos/sendreq-$version-macos-x64.dmg"
+          checksum="$(shasum -a 256 "dist/macos/sendreq-$version-macos-x64.dmg" | awk '{print $1}')"
+          printf '%s *%s\n' "$checksum" "sendreq-$version-macos-x64.dmg" \
+            > "dist/macos/sendreq-$version-macos-x64.dmg.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: dist/macos/*
+          if-no-files-found: error
+          retention-days: 30
+
+  linux:
+    name: Linux x64 DEB and RPM
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install Linux build and package dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ninja-build libgtk-3-dev rpm
+      - name: Verify release tag matches application version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
+          test "${{ github.ref_name }}" = "v$version"
+      - run: flutter pub get
+      - run: flutter analyze
+      - name: Run full test suite
+        run: flutter test
+      - name: Build Linux release bundle
+        run: |
+          flutter build linux --release
+          test -x build/linux/x64/release/bundle/sendreq
+      - name: Package and verify DEB and RPM
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
+          ./tool/package_linux.sh \
+            --bundle build/linux/x64/release/bundle \
+            --version "$version" \
+            --output dist/linux
+          dpkg-deb --info "dist/linux/sendreq-$version-linux-amd64.deb"
+          dpkg-deb --contents "dist/linux/sendreq-$version-linux-amd64.deb" | grep -F 'usr/lib/sendreq/sendreq'
+          rpm -qpl "dist/linux/sendreq-$version-linux-x86_64.rpm" | grep -Fx '/usr/lib/sendreq/sendreq'
+          for asset in dist/linux/*; do
+            sha256sum "$asset" > "$asset.sha256"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: dist/linux/*
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish desktop release assets
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Verify expected release assets
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          for asset in \
+            "sendreq-$version-windows-x64-setup.exe" \
+            "sendreq-$version-windows-x64.zip" \
+            "sendreq-$version-macos-x64.dmg" \
+            "sendreq-$version-linux-amd64.deb" \
+            "sendreq-$version-linux-x86_64.rpm"; do
+            test -f "release-assets/$asset"
+            test -f "release-assets/$asset.sha256"
+          done
+      - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: sendreq ${{ github.ref_name }}
           generate_release_notes: true
           fail_on_unmatched_files: true
-          files: |
-            dist/windows/*.exe
-            dist/windows/*.sha256
+          files: release-assets/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
