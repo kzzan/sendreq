@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="*"
+    Name="sendreq"
+    Language="1033"
+    Version="$(var.ProductVersion)"
+    Manufacturer="sendreq"
+    UpgradeCode="{D8F725C4-8A38-4ED7-B2CE-0EBE70C511F2}">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of sendreq is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="INSTALLFOLDER" Name="sendreq" />
+      </Directory>
+    </Directory>
+
+    <Feature Id="MainFeature" Title="sendreq" Level="1">
+      <ComponentGroupRef Id="SendreqFiles" />
+    </Feature>
+  </Product>
+</Wix>

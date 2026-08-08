@@ -1,0 +1,126 @@
+name: Windows CI and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-package-and-release:
+    name: Verify, package, and release Windows installer
+    runs-on: windows-2022
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Verify release tag matches application version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versionLine = (Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line
+          $version = ($versionLine -replace '^version:\s*', '').Split('+')[0].Trim()
+          $tag = '${{ github.ref_name }}'
+          if ($tag -ne "v$version") {
+            throw "Release tag '$tag' must match pubspec version 'v$version'."
+          }
+
+      - name: Fetch Dart dependencies
+        run: flutter pub get
+
+      - name: Analyze source
+        run: flutter analyze
+
+      - name: Run test suite
+        run: flutter test
+
+      - name: Build Windows release bundle
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path build/symbols/windows | Out-Null
+          flutter build windows --release --obfuscate --split-debug-info=build/symbols/windows
+          if (-not (Test-Path build/windows/x64/runner/Release/sendreq.exe)) {
+            throw 'Flutter did not produce build/windows/x64/runner/Release/sendreq.exe.'
+          }
+
+      - name: Install Inno Setup compiler
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install innosetup --yes --no-progress --limit-output
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          if (-not (Test-Path $compiler)) {
+            throw "Inno Setup compiler was not found at '$compiler'."
+          }
+
+      - name: Build Windows installer and checksum
+        id: package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $versionLine = (Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line
+          $version = ($versionLine -replace '^version:\s*', '').Split('+')[0].Trim()
+          $bundle = (Resolve-Path 'build/windows/x64/runner/Release').Path
+          $output = Join-Path $PWD 'dist/windows'
+          New-Item -ItemType Directory -Force -Path $output | Out-Null
+
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
+          & $compiler "/DSourceDir=$bundle" "/DMyAppVersion=$version" "/O$output" installer/windows/sendreq.iss
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+          }
+
+          $installer = Join-Path $output "sendreq-$version-windows-x64-setup.exe"
+          if (-not (Test-Path $installer)) {
+            throw "Expected installer '$installer' was not produced."
+          }
+          $checksum = Get-FileHash -Algorithm SHA256 $installer
+          "$($checksum.Hash.ToLowerInvariant()) *$([IO.Path]::GetFileName($installer))" |
+            Set-Content -Encoding ascii -NoNewline ("$installer.sha256")
+          "installer=$installer" >> $env:GITHUB_OUTPUT
+
+      - name: Verify installer can install, launch, and uninstall
+        shell: pwsh
+        run: |
+          ./tool/verify_windows_installer.ps1 `
+            -BundleDirectory build/windows/x64/runner/Release `
+            -InstallerPath '${{ steps.package.outputs.installer }}'
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sendreq-windows-x64-${{ github.sha }}
+          path: |
+            dist/windows/*.exe
+            dist/windows/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: sendreq ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/windows/*.exe
+            dist/windows/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
