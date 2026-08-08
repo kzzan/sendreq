@@ -54,6 +54,6 @@ flutter build windows --release
 
 ## 文档与协议 Demo
 
-产品说明、架构和本地数据策略位于上级目录的 [docs](../docs/README.md)。首次启动的示例集合统一命名为 **Sendreq Demo Example**，包含 5 个 REST 请求、1 个 WebSocket 请求和 1 个 gRPC 请求。Collection 工具菜单的 **Load Demo Example** 使用同一份示例定义追加一个独立副本，不会覆盖已有数据。
+产品说明、协议验收和维护约定位于仓库内的 [docs](docs/README.md)。首次启动的示例集合统一命名为 **Sendreq Demo Example**，包含 5 个 REST 请求、1 个 WebSocket 请求和 1 个 gRPC 请求。Collection 工具菜单的 **Load Demo Example** 使用同一份示例定义追加一个独立副本，不会覆盖已有数据。
 
-仓库同级的 `go-ws` 与 `go-grpc` 服务可用于协议互通验证；它们不是桌面客户端发布包的一部分。完整启动步骤见 [本地协议测试](../docs/local-protocol-testing.md)。
+仓库同级的 `go-ws` 与 `go-grpc` 服务可用于协议互通验证；它们不是桌面客户端发布包的一部分。完整启动步骤见[本地协议测试](docs/local-protocol-testing.md)。

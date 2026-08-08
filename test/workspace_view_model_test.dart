@@ -30,7 +30,7 @@ void main() {
       );
 
       final send = viewModel.sendActiveRequest();
-      viewModel.deleteRequest('get-users');
+      viewModel.deleteRequest('demo-rest-list-users');
       // 在删除请求之后才完成响应，验证迟到的响应被丢弃而不会生效。
       runtime.response.complete(_response());
       await send;
@@ -38,8 +38,8 @@ void main() {
       expect(runtime.cancelCount, 1);
       expect(viewModel.isSending, isFalse);
       expect(viewModel.response, isNull);
-      // 删除 get-users 后，活动请求应回落到默认的 Create session。
-      expect(viewModel.activeRequest.name, 'Create session');
+      // 删除首个 REST 请求后，活动请求应回落到同一示例集合中的下一个请求。
+      expect(viewModel.activeRequest.name, 'Create user');
     },
   );
 
@@ -57,7 +57,7 @@ void main() {
       // 记录删除前生成的历史 ID，随后验证删除后打开该历史的行为。
       final historyId = viewModel.history.first.id;
       viewModel.createDocumentationDraft();
-      viewModel.deleteRequest('get-users');
+      viewModel.deleteRequest('demo-rest-list-users');
 
       viewModel.openHistoryRecord(historyId);
       viewModel.openSelectedHistoryRequest();
@@ -78,14 +78,14 @@ void main() {
     viewModel.addActiveDraftField(headers: false);
     viewModel.updateActiveDraftField(
       headers: false,
-      index: 3,
+      index: 2,
       keyName: 'tag',
       value: 'alpha',
     );
     viewModel.addActiveDraftField(headers: false);
     viewModel.updateActiveDraftField(
       headers: false,
-      index: 4,
+      index: 3,
       keyName: 'tag',
       value: 'beta',
     );
@@ -206,7 +206,7 @@ void main() {
       expect(viewModel.response, isNotNull);
       expect(
         runtime.resolvedUrls.single,
-        'https://staging.sendreq.io/api/v1/users?limit=50&role=admin&include=profile%2Cteams',
+        'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
       );
 
       // Collection 的环境选择只改变变量解析上下文，不改变请求定义。
@@ -219,13 +219,13 @@ void main() {
       expect(viewModel.openedHistoryRecord, isNull);
       expect(
         viewModel.resolvedUrl,
-        'https://api.sendreq.io/api/v1/users?limit=50&role=admin&include=profile%2Cteams',
+        'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
       );
 
       await viewModel.sendActiveRequest();
       expect(runtime.resolvedUrls, [
-        'https://staging.sendreq.io/api/v1/users?limit=50&role=admin&include=profile%2Cteams',
-        'https://api.sendreq.io/api/v1/users?limit=50&role=admin&include=profile%2Cteams',
+        'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
+        'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
       ]);
       expect(
         viewModel.history.first.requestSnapshot!.environmentName,
@@ -262,8 +262,26 @@ void main() {
     () async {
       final environmentStore = InMemoryEnvironmentStore.sample();
       final runtime = _CapturingRuntime();
+      final repository = InMemoryApiAssetRepository.demo();
+      repository.addRequests([
+        for (final endpoint in ['country', 'asn', 'city'])
+          ApiRequestDefinition(
+            id: 'test-reurl-geoip-$endpoint',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'Lookup $endpoint',
+            method: 'GET',
+            urlTemplate:
+                '{{baseUrl}}/geoip/$endpoint?ip={{ip}}&lang={{lang}}',
+            queryParams: const [],
+            headers: const [],
+            bodyTemplate: '',
+            authentication: const RequestAuthentication.bearer('{{token}}'),
+            authenticationSource: RequestAuthenticationSource.environment,
+          ),
+      ]);
       final viewModel = workspaceViewModel(
-        assetRepository: InMemoryApiAssetRepository.demo(),
+        assetRepository: repository,
         environmentStore: environmentStore,
         executionRuntime: runtime,
       );
@@ -273,9 +291,9 @@ void main() {
         value: 'test-reurl-token',
       );
       for (final requestId in [
-        'get-reurl-geoip-country',
-        'get-reurl-geoip-asn',
-        'get-reurl-geoip-city',
+        'test-reurl-geoip-country',
+        'test-reurl-geoip-asn',
+        'test-reurl-geoip-city',
       ]) {
         viewModel.selectRequest(requestId);
         await viewModel.sendActiveRequest();
@@ -449,8 +467,8 @@ void main() {
       final viewModel = workspaceViewModel(
         assetRepository: InMemoryApiAssetRepository.demo(),
       );
-      viewModel.selectRequest('post-session');
-      viewModel.selectRequest('put-invoice');
+      viewModel.selectRequest('demo-rest-create-user');
+      viewModel.selectRequest('demo-rest-replace-user');
       final target = viewModel.openRequestTabs[1];
 
       viewModel.closeRequestTabs([
@@ -470,6 +488,13 @@ void main() {
       assetRepository: InMemoryApiAssetRepository.demo(),
     );
 
+    viewModel.addActiveDraftField(headers: true);
+    viewModel.updateActiveDraftField(
+      headers: true,
+      index: 0,
+      keyName: 'X-Workspace',
+      value: 'sendreq.desktop',
+    );
     viewModel.setActiveBearerAuthentication(false);
 
     expect(viewModel.usesBearerAuthentication, isFalse);
@@ -480,13 +505,15 @@ void main() {
   test(
     'custom authorization is never removed by bearer authentication controls',
     () {
-      final viewModel = workspaceViewModel(
-        assetRepository: InMemoryApiAssetRepository.demo(),
-      );
+    final viewModel = workspaceViewModel(
+      assetRepository: InMemoryApiAssetRepository.demo(),
+    );
 
+      viewModel.addActiveDraftField(headers: true);
       viewModel.updateActiveDraftField(
         headers: true,
         index: 0,
+        keyName: 'Authorization',
         value: 'Basic ZGVtbzpwYXNz',
       );
       viewModel.setActiveBearerAuthentication(false);
@@ -756,7 +783,7 @@ void main() {
       expect(viewModel.activeGrpcCall.events, hasLength(1));
 
       final tab = viewModel.openRequestTabs.singleWhere(
-        (item) => item.requestId == 'get-users',
+        (item) => item.requestId == 'demo-rest-list-users',
       );
       viewModel.closeRequestTab(tab.id);
       await Future<void>.delayed(Duration.zero);
@@ -789,9 +816,9 @@ void main() {
       keyName: 'files[]',
     );
     viewModel.updateAllActiveMultipartFileKeyNames('attachments');
-    viewModel.saveRequest('get-users');
+    viewModel.saveRequest('demo-rest-list-users');
 
-    final saved = repository.getRequest('get-users');
+    final saved = repository.getRequest('demo-rest-list-users');
     expect(
       saved.headers
           .singleWhere((header) => header.key.toLowerCase() == 'content-type')

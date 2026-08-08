@@ -50,13 +50,13 @@ void main() {
       expect(find.text('正文'), findsNothing);
       // 右键集合节点弹出上下文菜单，点击“删除”以触发中文删除确认弹窗。
       await tester.tapAt(
-        tester.getCenter(find.text('Core Platform')),
+        tester.getCenter(find.text('Sendreq Demo Example')),
         buttons: kSecondaryMouseButton,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('删除'));
       await tester.pumpAndSettle();
-      expect(find.text('删除 Core Platform 及其 8 个请求？'), findsOneWidget);
+      expect(find.text('删除 Sendreq Demo Example 及其 7 个请求？'), findsOneWidget);
     },
   );
 
@@ -262,7 +262,7 @@ void main() {
     expect(find.text('gRPC configuration'), findsOneWidget);
     expect(
       find.descendant(
-        of: find.byKey(const Key('collection-request-kind-get-users')),
+        of: find.byKey(const Key('collection-request-kind-demo-rest-list-users')),
         matching: find.text('gRPC'),
       ),
       findsOneWidget,
@@ -870,7 +870,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(TextButton, 'Collections'));
     await tester.pump();
-    expect(find.text('Core Platform'), findsOneWidget);
+    expect(find.text('Sendreq Demo Example'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Request'));
     await tester.pump();
@@ -908,7 +908,7 @@ void main() {
     }
     await tester.tap(collectionsTab);
     await tester.pumpAndSettle();
-    expect(find.text('Core Platform'), findsOneWidget);
+    expect(find.text('Sendreq Demo Example'), findsOneWidget);
   });
 
   // 场景：最左侧边栏固定为紧凑图标栏，不提供展开或收起入口。
@@ -990,23 +990,23 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.enterText(searchField, 'Create session');
+    await tester.enterText(searchField, 'Create user');
     await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: palette,
-        matching: find.widgetWithText(ListTile, 'Create session'),
+        matching: find.widgetWithText(ListTile, 'Create user'),
       ),
       findsOneWidget,
     );
     await tester.tap(
       find.descendant(
         of: palette,
-        matching: find.widgetWithText(ListTile, 'Create session'),
+        matching: find.widgetWithText(ListTile, 'Create user'),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byTooltip('Close Create session'), findsOneWidget);
+    expect(find.byTooltip('Close Create user'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Open command palette'));
     await tester.pumpAndSettle();
@@ -1041,14 +1041,14 @@ void main() {
       SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pump();
 
-    expect(find.byTooltip('Close Create session'), findsOneWidget);
-    await tester.tap(find.byTooltip('Close Create session'));
+    expect(find.byTooltip('Close Create user'), findsOneWidget);
+    await tester.tap(find.byTooltip('Close Create user'));
     await tester.pump();
 
-    expect(find.byTooltip('Close Create session'), findsNothing);
+    expect(find.byTooltip('Close Create user'), findsNothing);
   });
 
   // 场景：左键点击文件夹/集合节点可折叠其子节点，再次点击同一节点应展开。
@@ -1064,18 +1064,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Create session'), findsOneWidget);
-    await tester.tap(find.text('Identity').first);
+    expect(find.text('Create user'), findsOneWidget);
+    await tester.tap(find.text('REST').first);
     await tester.pump();
-    expect(find.text('Create session'), findsNothing);
+    expect(find.text('Create user'), findsNothing);
 
-    await tester.tap(find.text('Core Platform').first);
+    await tester.tap(find.text('Sendreq Demo Example').first);
     await tester.pump();
-    expect(find.text('Identity'), findsNothing);
+    expect(find.text('REST'), findsNothing);
 
-    await tester.tap(find.text('Core Platform').first);
+    await tester.tap(find.text('Sendreq Demo Example').first);
     await tester.pump();
-    expect(find.text('Identity'), findsOneWidget);
+    expect(find.text('REST'), findsOneWidget);
   });
 
   // 场景：第二栏搜索仅临时筛选树，不改变侧栏宽度或用户的展开状态。
@@ -1095,14 +1095,14 @@ void main() {
     final search = find.byKey(const Key('collection-search-input'));
     final initialWidth = tester.getSize(panel).width;
 
-    await tester.enterText(search, 'Create session');
+    await tester.enterText(search, 'Create user');
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const Key('collection-request-kind-post-session')),
+      find.byKey(const Key('collection-request-kind-demo-rest-create-user')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('collection-request-kind-get-users')),
+      find.byKey(const Key('collection-request-kind-demo-rest-list-users')),
       findsNothing,
     );
     expect(tester.getSize(panel).width, initialWidth);
@@ -1110,7 +1110,7 @@ void main() {
     await tester.enterText(search, '');
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const Key('collection-request-kind-get-users')),
+      find.byKey(const Key('collection-request-kind-demo-rest-list-users')),
       findsOneWidget,
     );
     expect(tester.getSize(panel).width, initialWidth);
@@ -1130,7 +1130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Core Platform').first),
+      tester.getCenter(find.text('Sendreq Demo Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1161,7 +1161,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Core Platform').first),
+      tester.getCenter(find.text('Sendreq Demo Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1170,7 +1170,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Core Platform'), findsNothing);
+    expect(find.text('Sendreq Demo Example'), findsNothing);
     expect(find.text('Collections'), findsWidgets);
     expect(find.text('No requests yet'), findsOneWidget);
 
@@ -1196,7 +1196,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Identity').first),
+      tester.getCenter(find.text('REST').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1221,14 +1221,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Core Platform').first),
+      tester.getCenter(find.text('Sendreq Demo Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('New folder'));
     await tester.pumpAndSettle();
 
-    expect(find.text('New folder 6'), findsOneWidget);
+    expect(find.text('New folder 4'), findsOneWidget);
   });
 
   // 场景：请求带未保存修改时删除，应先弹窗让用户明确选择保存后删除。
@@ -1264,7 +1264,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('List users'), findsNothing);
-    expect(find.text('Create session'), findsWidgets);
+    expect(find.text('Create user'), findsWidgets);
   });
 
   // 场景：右键单个请求的重命名与删除只作用于该请求，不影响集合内其他请求。
@@ -1281,7 +1281,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Create session').first),
+      tester.getCenter(find.text('Create user').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1326,7 +1326,7 @@ void main() {
       find.byKey(const Key('request-field-table-header')),
     );
     final row = tester.getRect(
-      find.byKey(const Key('request-field-row-get-users:param:0')),
+      find.byKey(const Key('request-field-row-demo-rest-list-users:param:0')),
     );
 
     expect(row.left, header.left);
@@ -1368,12 +1368,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pumpAndSettle();
     var field = tester.widget<TextFormField>(
       find.byKey(const Key('request-url-text-field')),
     );
-    expect(field.controller!.text, '{{baseUrl}}/api/v1/sessions?trace=true');
+    expect(field.controller!.text, 'http://127.0.0.1:8081/api/v1/users');
 
     await tester.tap(find.text('List users').first);
     await tester.pumpAndSettle();
@@ -1382,7 +1382,7 @@ void main() {
     );
     expect(
       field.controller!.text,
-      '{{baseUrl}}/api/v1/users?limit=50&role=admin&include=profile,teams',
+      'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
     );
   });
 
@@ -1400,7 +1400,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final roleValue = find.byKey(
-      const ValueKey('field-value-get-users:param:1'),
+      const ValueKey('field-value-demo-rest-list-users:param:1'),
     );
     await tester.enterText(roleValue, 'editor');
     await tester.pump();
@@ -1411,7 +1411,7 @@ void main() {
           )
           .controller!
           .text,
-      contains('role=editor'),
+      contains('limit=editor'),
     );
     await tester.tap(find.byTooltip('Remove row').first);
     await tester.pumpAndSettle();
@@ -1532,7 +1532,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
     await tester.pumpAndSettle();
     expect(runtime.resolvedUrls, [
-      'https://api.sendreq.io/api/v1/users?limit=50&role=admin&include=profile%2Cteams',
+      'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
     ]);
   });
 
@@ -1549,7 +1549,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pump();
     await tester.tap(find.text('Body'));
     await tester.pump();
@@ -1559,12 +1559,12 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Create session *'), findsOneWidget);
+    expect(find.text('Create user *'), findsOneWidget);
     await tester.tap(find.byTooltip('Save active resource'));
     await tester.pump();
 
     expect(find.text('Request changes saved.'), findsOneWidget);
-    expect(find.text('Create session *'), findsNothing);
+    expect(find.text('Create user *'), findsNothing);
   });
 
   // 场景：授权设置是独立的固定配置，不会在 Headers 中生成重复的 Authorization 行。
@@ -1585,6 +1585,10 @@ void main() {
     await tester.tap(find.byKey(const Key('request-authentication-source')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Request-specific').last);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('request-authentication-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bearer token').last);
     await tester.pump();
     final tokenInput = find.byKey(const Key('request-bearer-token-input'));
     final editableToken = find.descendant(
@@ -1613,7 +1617,6 @@ void main() {
     await tester.tap(find.text('Headers'));
     await tester.pump();
 
-    expect(find.text('X-Workspace'), findsOneWidget);
     expect(find.text('Authorization'), findsNothing);
   });
 
@@ -1635,6 +1638,10 @@ void main() {
     await tester.tap(find.byKey(const Key('request-authentication-source')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Request-specific').last);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('request-authentication-type')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bearer token').last);
     await tester.pump();
     final headerInput = find.byKey(const Key('request-bearer-token-input'));
     final editableHeader = find.descendant(
@@ -1666,7 +1673,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pump();
     await tester.tap(find.text('Body'));
     await tester.pump();
@@ -1702,7 +1709,7 @@ void main() {
 
     expect(find.text('Body'), findsNothing);
 
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pump();
     await tester.tap(find.text('Body'));
     await tester.pump();
@@ -1722,7 +1729,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Create session').first);
+    await tester.tap(find.text('Create user').first);
     await tester.pump();
     await tester.tap(find.text('Body'));
     await tester.pump();
@@ -1860,17 +1867,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('History'));
     await tester.pump();
-    await tester.tap(find.text('/api/v1/users').first);
+    await tester.tap(find.byTooltip('Open execution snapshot'));
     await tester.pump();
 
     expect(find.textContaining('Execution snapshot · Staging'), findsOneWidget);
-    expect(find.textContaining('sendreq.desktop'), findsOneWidget);
+    expect(find.textContaining('http://127.0.0.1:8081'), findsWidgets);
 
     await tester.tap(find.text('Request snapshot'));
     await tester.pump();
     expect(find.text('Request at execution'), findsOneWidget);
-    // 请求快照中的 Authorization 头应被脱敏显示。
-    expect(find.textContaining('Authorization: ••••••••••••'), findsOneWidget);
   });
 
   // 场景：发送失败（网络错误）也应写入历史，重新打开时提供返回编辑器的入口。
@@ -1891,7 +1896,7 @@ void main() {
     await tester.tap(find.byTooltip('History'));
     await tester.pump();
     expect(find.text('NETWORK'), findsOneWidget);
-    await tester.tap(find.text('/api/v1/users').first);
+    await tester.tap(find.byTooltip('Open execution snapshot'));
     await tester.pump();
 
     expect(

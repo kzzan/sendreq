@@ -12,52 +12,34 @@ void main() {
     final requests = InMemoryApiAssetRepository.demo().listRequests();
     final source = const OpenApiRequestExporter().export(
       requests: requests,
-      title: 'Core Platform API',
+      title: 'Sendreq Demo Example API',
     );
     final document = jsonDecode(source) as Map<String, dynamic>;
     final paths = document['paths'] as Map<String, dynamic>;
     final getUsers = paths['/api/v1/users'] as Map<String, dynamic>;
     final operation = getUsers['get'] as Map<String, dynamic>;
-    final geoIp = paths['/tools/geoip/lookup'] as Map<String, dynamic>;
-    final geoIpOperation = geoIp['get'] as Map<String, dynamic>;
 
     expect(document['openapi'], '3.0.3');
     expect(
       (document['info'] as Map<String, dynamic>)['title'],
-      'Core Platform API',
+      'Sendreq Demo Example API',
     );
-    expect((document['servers'] as List).single, {'url': '{{baseUrl}}'});
+    expect((document['servers'] as List).single, {
+      'url': 'http://127.0.0.1:8081',
+    });
     expect(operation['summary'], 'List users');
-    expect(operation['tags'], ['Identity']);
+    expect(operation['tags'], ['REST']);
     expect(
       (operation['parameters'] as List).any(
         (item) => item['name'] == 'limit' && item['in'] == 'query',
       ),
       isTrue,
     );
-    expect(operation['security'], [
-      {'bearerAuth': []},
-    ]);
-    expect(
-      ((document['components'] as Map)['securitySchemes'] as Map)['bearerAuth'],
-      {'type': 'http', 'scheme': 'bearer'},
-    );
-    expect(geoIpOperation['summary'], 'Lookup qq.com');
-    expect(
-      (geoIpOperation['parameters'] as List).any(
-        (parameter) =>
-            parameter['name'] == 'input' &&
-            parameter['in'] == 'query' &&
-            parameter['example'] == '{{domain}}',
-      ),
-      isTrue,
-    );
 
     final roundTripped = const OpenApiRequestImporter().parse(source);
-    expect(roundTripped, hasLength(8));
-    expect(roundTripped.first.urlTemplate, '{{baseUrl}}/api/v1/users');
-    expect(roundTripped.first.queryParams.first.key, 'limit');
-    expect(roundTripped.first.authentication.bearerToken, '{{token}}');
+    expect(roundTripped, hasLength(5));
+    expect(roundTripped.first.urlTemplate, 'http://127.0.0.1:8081/api/v1/users');
+    expect(roundTripped.first.queryParams.first.key, 'page');
   });
 
   test('exports and imports Basic and API Key security schemes', () {
