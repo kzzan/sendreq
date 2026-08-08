@@ -1,15 +1,50 @@
 # sendreq
 
-sendreq 是面向开发与测试团队的桌面 API 工作台。它把请求编辑、协议调试、环境变量、接口资产和执行记录放在一个本地优先的工作区中，帮助使用者更快地复现、验证和交付接口行为。
+面向开发和测试团队的本地优先 API 工作台。sendreq 将 REST、WebSocket 和 gRPC 调试，以及接口资产、环境变量、Mock、执行历史和接口文档汇集在一个桌面应用中，让接口从调试到交付保持在同一条工作流内。
 
-## 核心能力
+> A local-first desktop API workbench for development and test teams. sendreq brings REST, WebSocket, and gRPC debugging together with API assets, environments, mocks, execution history, and publishable API documentation.
 
-- **多协议调试**：发送 HTTP 请求、连接 WebSocket，并通过导入 `.proto` 文件发起 gRPC 调用。
-- **接口资产管理**：以 Collection、Folder 和 Request 组织接口；可导入受限的 OpenAPI 3.x JSON，并导出 HTTP 请求的 OpenAPI 3.0.3 JSON。
-- **环境与变量**：管理多个环境，在 URL、请求头和正文中解析变量；敏感请求头在历史和导出内容中保持脱敏。
-- **请求与响应工作流**：支持认证、查询参数、请求头、JSON、表单和 multipart 请求体，保留执行快照与近期历史记录。
-- **本地协作产物**：从响应快照生成 Markdown 接口文档；提供 Quick Mock 以便本地验证接口响应。
-- **本地优先存储**：工作区、环境和历史保存在系统应用数据目录；文档与 OpenAPI 默认导出到 `Documents/sendreq`，也可在设置中自定义目录。
+## 核心能力 | Highlights
+
+### 多端桌面交付 | Cross-platform desktop delivery
+
+- **中文**：提供 Windows、macOS 和 Linux 桌面安装包，适合个人调试、测试验证和团队内部分发。工作区与历史记录默认保存在本地，离线也能继续组织和查看接口资产。
+- **English**: Native desktop packages are available for Windows, macOS, and Linux. Workspaces and history are stored locally by default, so API assets remain available when offline.
+
+### 为桌面工作台而构建 | Built for a desktop workbench
+
+- **中文**：客户端采用 Flutter 构建，使用原生桌面窗口与控件能力，不打包 Chromium 运行时。相较于基于 Electron 的同类架构，这通常有利于控制安装体积和常驻资源开销；具体内存占用取决于操作系统、接口数量、响应体大小和实际使用方式，应以目标环境的实测数据为准。
+- **English**: The client is built with Flutter and uses native desktop window and control capabilities without bundling a Chromium runtime. Compared with Electron-based architectures, this typically helps control installation size and resident resource overhead. Actual memory use depends on the operating system, request volume, response size, and workload, and should be measured in the target environment.
+
+### REST、WebSocket 与 gRPC | REST, WebSocket, and gRPC
+
+- **中文**：发送 REST 请求，管理查询参数、请求头、认证、JSON、表单与 multipart 请求体；连接并调整 WebSocket 长连接，发送文本、JSON、XML、二进制或 MessagePack 帧，查看完整收发时间线；导入 `.proto` 后调用 gRPC service/method，并查看 Protobuf 响应和 status trailer。
+- **English**: Send REST requests with query parameters, headers, authentication, JSON, form, and multipart bodies. Connect to and tune long-lived WebSocket sessions, send text, JSON, XML, binary, or MessagePack frames, and inspect the full inbound/outbound timeline. Import `.proto` files to invoke gRPC services and methods, then inspect Protobuf responses and status trailers.
+
+### 接口文档与 Swagger UI 互通 | API documentation and Swagger UI interoperability
+
+- **中文**：从已验证的请求与响应快照生成 Markdown 接口文档，包含方法、URL、请求信息、响应头、格式化响应示例和 cURL；文档可导出到本地目录。支持导入受限的 OpenAPI 3.x JSON，并将 HTTP 请求导出为 OpenAPI 3.0.3 JSON，可与 Swagger UI 使用同一份 OpenAPI 定义进行展示、维护和交换。
+- **English**: Generate Markdown API references from verified request and response snapshots, including method, URL, request details, response headers, formatted examples, and cURL. Export the generated document locally. Import supported OpenAPI 3.x JSON and export HTTP requests as OpenAPI 3.0.3 JSON, so the same definition can be exchanged with and rendered by Swagger UI.
+
+### 从调试到协作 | From debugging to collaboration
+
+- **中文**：使用 Collection、Folder 和 Request 管理接口；在 URL、请求头和正文中解析环境变量；保留执行快照与近期历史；可从最新响应快速创建仅绑定回环地址的本地 Mock，方便前后端并行验证。敏感请求头在历史和导出内容中保持脱敏。
+- **English**: Organize APIs with Collections, Folders, and Requests; resolve environment variables in URLs, headers, and bodies; retain execution snapshots and recent history; and create loopback-only local mocks directly from the latest response for parallel frontend and backend verification. Sensitive headers remain redacted in history and exported content.
+
+## 功能一览 | Feature list
+
+| 能力 | 中文 | English |
+| --- | --- | --- |
+| HTTP/REST 调试 | 支持 GET、POST、PUT、PATCH、DELETE，请求 URL、查询参数、请求头、认证、JSON、表单和 multipart 请求体均可编辑。 | Supports GET, POST, PUT, PATCH, and DELETE with editable URLs, query parameters, headers, authentication, JSON, form, and multipart bodies. |
+| 多环境变量 | 创建、编辑与快速切换开发、测试、预发布、生产等环境；在 URL、请求头和正文中引用变量，缺失变量会明确提示。 | Create, edit, and switch among development, test, staging, and production environments; reference variables in URLs, headers, and bodies with explicit missing-variable feedback. |
+| 认证与脱敏 | 支持请求级或环境继承的认证配置；敏感请求头在执行历史与导出文档中保持掩码。 | Supports request-level or environment-inherited authentication; sensitive request headers remain masked in execution history and exported documentation. |
+| WebSocket 长连接 | 连接 `ws://` / `wss://` 端点，调整连接配置与请求头，连接、断开或重连长连接；发送 Text、JSON、XML、二进制与 MessagePack 帧，按时间线查看出站和入站消息。 | Connect to `ws://` / `wss://` endpoints, adjust connection settings and headers, and connect, disconnect, or reconnect long-lived sessions; send Text, JSON, XML, binary, and MessagePack frames with an inbound/outbound timeline. |
+| gRPC 与 Protobuf | 导入 `.proto` 或 descriptor set，选择 service 和 method，配置 TLS 与 metadata，发送动态编码的 Protobuf 请求，查看消息、响应头与 status trailer。 | Import `.proto` files or descriptor sets, select services and methods, configure TLS and metadata, send dynamically encoded Protobuf requests, and inspect messages, headers, and status trailers. |
+| OpenAPI / Swagger UI | 导入受支持的 OpenAPI 3.x JSON 为请求集合；将 HTTP 请求导出为 OpenAPI 3.0.3 JSON，与 Swagger UI 使用同一份定义展示、维护和交换。 | Import supported OpenAPI 3.x JSON as request collections; export HTTP requests as OpenAPI 3.0.3 JSON for viewing, maintaining, and exchanging the same definition with Swagger UI. |
+| Markdown 接口文档 | 基于成功执行的请求与响应快照生成 Markdown、cURL 和格式化响应示例，并导出到可配置的本地目录。 | Generate Markdown references, cURL, and formatted response examples from executed request and response snapshots, then export them to a configurable local directory. |
+| Quick Mock | 手动创建 Mock，或由最近响应创建 Mock；仅绑定回环地址，按 HTTP 方法和路径返回本地响应，适用于前端联调和测试环境验证。 | Create a mock manually or from the latest response; it binds only to loopback and returns local responses by HTTP method and path for frontend integration and test-environment validation. |
+| 执行历史与接口资产 | 使用 Collection、Folder、Request 组织接口；保留近期请求执行快照，按成功、失败和关键字回溯调试过程。 | Organize APIs with Collections, Folders, and Requests; retain recent execution snapshots and trace debugging work by status and keyword. |
+| 本地优先与可配置输出 | 工作区、环境、偏好与历史保存在系统应用数据目录；Markdown 和 OpenAPI 输出目录可在设置中配置。 | Workspaces, environments, preferences, and history are stored in the system application-data directory; Markdown and OpenAPI output folders are configurable in Settings. |
 
 ## 桌面安装包
 
