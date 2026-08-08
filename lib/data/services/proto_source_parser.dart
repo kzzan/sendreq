@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as path;
 
 import 'protobuf_descriptor_set.dart';
 
@@ -196,16 +197,12 @@ class ProtoSourceParser {
   /// 内存解析可继续使用 `health.proto` 这类相对 key，文件解析则使用绝对
   /// key；两种模式都会用同一规则遍历 import 图。
   String _resolveImportPath(String sourcePath, String importedPath) {
-    if (importedPath.startsWith('/')) return _normalizePath(importedPath);
-    final separatorIndex = sourcePath.lastIndexOf('/');
-    final base = separatorIndex == -1
-        ? ''
-        : sourcePath.substring(0, separatorIndex + 1);
-    return _normalizePath('$base$importedPath');
+    if (path.isAbsolute(importedPath)) return _normalizePath(importedPath);
+    return _normalizePath(path.join(path.dirname(sourcePath), importedPath));
   }
 
   /// 消除 `.` / `..`，让递归收集与解析使用相同 map key。
-  String _normalizePath(String path) => Uri(path: path).normalizePath().path;
+  String _normalizePath(String value) => path.normalize(value);
 }
 
 /// 一次声明块（message/enum/service）的名称与正文。
