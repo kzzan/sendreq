@@ -182,7 +182,7 @@ jobs:
 
   linux:
     name: Linux x64 DEB and RPM
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 45
 
     steps:
