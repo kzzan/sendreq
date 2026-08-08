@@ -17,11 +17,11 @@ on:
 permissions:
   contents: read
 
-# Avoid duplicate release builds competing for the same tag while preserving a
-# running release verification once it has started.
+# A replacement tag build must supersede an older queued build for the same
+# release ref, otherwise both runs can compete to publish identical assets.
 concurrency:
   group: desktop-packages-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   checks:
@@ -170,12 +170,12 @@ jobs:
           compression-level: 0
 
   macos:
-    name: macOS x64 DMG
+    name: macOS ARM64 DMG
     if: >-
       startsWith(github.ref, 'refs/tags/v') ||
       (github.event_name == 'workflow_dispatch' && inputs.build_release_assets)
     needs: checks
-    runs-on: macos-13
+    runs-on: macos-14
     timeout-minutes: 45
 
     steps:
@@ -189,6 +189,7 @@ jobs:
         run: |
           flutter build macos --release
           test -x build/macos/Build/Products/Release/sendreq.app/Contents/MacOS/sendreq
+          file build/macos/Build/Products/Release/sendreq.app/Contents/MacOS/sendreq | grep -F 'arm64'
       - name: Package and verify macOS DMG
         run: |
           version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml)"
@@ -198,10 +199,10 @@ jobs:
             --version "$version" \
             --output dist/macos
           ./tool/verify_macos_dmg.sh \
-            --dmg "dist/macos/sendreq-$version-macos-x64.dmg"
-          checksum="$(shasum -a 256 "dist/macos/sendreq-$version-macos-x64.dmg" | awk '{print $1}')"
-          printf '%s *%s\n' "$checksum" "sendreq-$version-macos-x64.dmg" \
-            > "dist/macos/sendreq-$version-macos-x64.dmg.sha256"
+            --dmg "dist/macos/sendreq-$version-macos-arm64.dmg"
+          checksum="$(shasum -a 256 "dist/macos/sendreq-$version-macos-arm64.dmg" | awk '{print $1}')"
+          printf '%s *%s\n' "$checksum" "sendreq-$version-macos-arm64.dmg" \
+            > "dist/macos/sendreq-$version-macos-arm64.dmg.sha256"
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos
@@ -277,7 +278,7 @@ jobs:
             "sendreq-$version-windows-x64-setup.exe" \
             "sendreq-$version-windows-x64.zip" \
             "sendreq-$version-windows-x64.msi" \
-            "sendreq-$version-macos-x64.dmg" \
+            "sendreq-$version-macos-arm64.dmg" \
             "sendreq-$version-linux-amd64.deb" \
             "sendreq-$version-linux-x86_64.rpm"; do
             test -f "release-assets/$asset"

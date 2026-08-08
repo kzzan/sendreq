@@ -34,4 +34,4 @@ hdiutil create \
   -ov \
   -format UDZO \
   -imagekey zlib-level=1 \
-  "$output/sendreq-$version-macos-x64.dmg"
+  "$output/sendreq-$version-macos-arm64.dmg"

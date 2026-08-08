@@ -53,7 +53,7 @@
 - `sendreq-<version>-windows-x64-setup.exe`：Windows 安装程序，普通账户可直接安装。
 - `sendreq-<version>-windows-x64.msi`：Windows MSI 安装程序，适用于企业软件分发和 `msiexec` 静默部署。
 - `sendreq-<version>-windows-x64.zip`：Windows 便携版。解压到任意可写目录后直接运行 `sendreq.exe`，无需安装。
-- `sendreq-<version>-macos-x64.dmg`：macOS Intel DMG。挂载后将 `sendreq.app` 拖入 Applications。
+- `sendreq-<version>-macos-arm64.dmg`：macOS Apple Silicon (arm64) DMG。挂载后将 `sendreq.app` 拖入 Applications。
 - `sendreq-<version>-linux-amd64.deb`：Debian、Ubuntu 及兼容发行版安装包。
 - `sendreq-<version>-linux-x86_64.rpm`：Fedora、RHEL、openSUSE 及兼容发行版安装包。
 
