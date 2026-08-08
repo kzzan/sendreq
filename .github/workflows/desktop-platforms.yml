@@ -194,7 +194,7 @@ jobs:
       - name: Install Linux build and package dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install --yes ninja-build libgtk-3-dev rpm
+          sudo apt-get install --yes ninja-build libgtk-3-dev libayatana-appindicator3-dev rpm
       - name: Verify release tag matches application version
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
