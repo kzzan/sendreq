@@ -16,6 +16,7 @@ sendreq 是面向开发与测试团队的桌面 API 工作台。它把请求编�
 每个正式版本都会在 GitHub Releases 提供以下 x64 桌面包及对应 SHA-256 文件：
 
 - `sendreq-<version>-windows-x64-setup.exe`：Windows 安装程序，普通账户可直接安装。
+- `sendreq-<version>-windows-x64.msi`：Windows MSI 安装程序，适用于企业软件分发和 `msiexec` 静默部署。
 - `sendreq-<version>-windows-x64.zip`：Windows 便携版。解压到任意可写目录后直接运行 `sendreq.exe`，无需安装。
 - `sendreq-<version>-macos-x64.dmg`：macOS Intel DMG。挂载后将 `sendreq.app` 拖入 Applications。
 - `sendreq-<version>-linux-amd64.deb`：Debian、Ubuntu 及兼容发行版安装包。
@@ -37,7 +38,7 @@ sudo rpm -Uvh ./sendreq-<version>-linux-x86_64.rpm
 
 Windows 安装后可从开始菜单启动 sendreq，也可通过 Windows 设置卸载。macOS DMG 当前未配置 Apple Developer ID 签名和公证，因此 Gatekeeper 可能要求用户在系统设置中明确允许首次启动。
 
-当前发布流程会在 GitHub 的 Windows、macOS、Linux Runner 上分别完成静态检查、完整测试、Release 构建和平台包验证。Windows 安装程序执行“静默安装 -> 启动应用 -> 卸载 -> 文件校验”，便携 ZIP 执行“解压 -> 启动 -> 文件校验”；DMG 执行挂载与应用包结构检查；DEB/RPM 执行包元数据与已打包可执行文件检查。所有门禁成功后，才会创建或更新 GitHub Release。
+当前发布流程会在 GitHub 的 Windows、macOS、Linux Runner 上分别完成静态检查、完整测试、Release 构建和平台包验证。Windows EXE 与 MSI 都执行“静默安装 -> 启动应用 -> 卸载 -> 文件校验”，便携 ZIP 执行“解压 -> 启动 -> 文件校验”；DMG 执行挂载与应用包结构检查；DEB/RPM 执行包元数据与已打包可执行文件检查。所有门禁成功后，才会创建或更新 GitHub Release。
 
 > Windows SmartScreen 的信誉提示取决于代码签名证书和下载信誉。仓库尚未配置代码签名证书时，安装包功能已通过自动安装验证，但仍可能显示该系统级提示。
 

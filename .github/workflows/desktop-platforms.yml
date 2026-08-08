@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   windows:
-    name: Windows x64 installer and portable ZIP
+    name: Windows x64 installer, MSI, and portable ZIP
     runs-on: windows-2022
     timeout-minutes: 45
 
@@ -45,14 +45,17 @@ jobs:
           if (-not (Test-Path build/windows/x64/runner/Release/sendreq.exe)) {
             throw 'Flutter did not produce build/windows/x64/runner/Release/sendreq.exe.'
           }
-      - name: Install Inno Setup compiler
+      - name: Install Windows package compilers
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          choco install innosetup --yes --no-progress --limit-output
+          choco install innosetup wixtoolset --yes --no-progress --limit-output
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6/ISCC.exe'
           if (-not (Test-Path $compiler)) {
             throw "Inno Setup compiler was not found at '$compiler'."
+          }
+          if (-not (Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1)) {
+            throw 'WiX candle.exe was not found after installation.'
           }
       - name: Package Windows installer and portable ZIP
         shell: pwsh
@@ -75,7 +78,32 @@ jobs:
           }
           $portable = Join-Path $output "sendreq-$version-windows-x64.zip"
           Compress-Archive -Path "$bundle\*" -DestinationPath $portable -CompressionLevel Optimal
-          foreach ($asset in @($installer, $portable)) {
+
+          $wixBin = (Get-ChildItem -Path ${env:ProgramFiles(x86)} -Filter candle.exe -Recurse -ErrorAction Stop | Select-Object -First 1).Directory.FullName
+          $wixWork = Join-Path $env:RUNNER_TEMP 'sendreq-wix'
+          New-Item -ItemType Directory -Force -Path $wixWork | Out-Null
+          $harvested = Join-Path $wixWork 'sendreq_files.wxs'
+          & (Join-Path $wixBin 'heat.exe') dir $bundle -cg SendreqFiles -dr INSTALLFOLDER -gg -srd -sfrag -var var.SourceDir -out $harvested
+          if ($LASTEXITCODE -ne 0) {
+            throw "WiX heat failed with exit code $LASTEXITCODE."
+          }
+          $productObject = Join-Path $wixWork 'sendreq.wixobj'
+          $filesObject = Join-Path $wixWork 'sendreq_files.wixobj'
+          & (Join-Path $wixBin 'candle.exe') "-dSourceDir=$bundle" "-dProductVersion=$version" -out $productObject installer/windows/sendreq.wxs
+          if ($LASTEXITCODE -ne 0) {
+            throw "WiX candle failed for product source with exit code $LASTEXITCODE."
+          }
+          & (Join-Path $wixBin 'candle.exe') "-dSourceDir=$bundle" -out $filesObject $harvested
+          if ($LASTEXITCODE -ne 0) {
+            throw "WiX candle failed for harvested files with exit code $LASTEXITCODE."
+          }
+          $msi = Join-Path $output "sendreq-$version-windows-x64.msi"
+          & (Join-Path $wixBin 'light.exe') -out $msi $productObject $filesObject
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $msi)) {
+            throw "WiX light did not produce '$msi'."
+          }
+
+          foreach ($asset in @($installer, $portable, $msi)) {
             $checksum = Get-FileHash -Algorithm SHA256 $asset
             "$($checksum.Hash.ToLowerInvariant()) *$([IO.Path]::GetFileName($asset))" |
               Set-Content -Encoding ascii -NoNewline ("$asset.sha256")
@@ -94,6 +122,13 @@ jobs:
           ./tool/verify_windows_portable_zip.ps1 `
             -BundleDirectory build/windows/x64/runner/Release `
             -ZipPath "dist/windows/sendreq-$version-windows-x64.zip"
+      - name: Verify MSI can install, launch, and uninstall
+        shell: pwsh
+        run: |
+          $version = ((Select-String -Path pubspec.yaml -Pattern '^version:\s*').Line -replace '^version:\s*', '').Split('+')[0].Trim()
+          ./tool/verify_windows_msi.ps1 `
+            -BundleDirectory build/windows/x64/runner/Release `
+            -MsiPath "dist/windows/sendreq-$version-windows-x64.msi"
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows
@@ -214,6 +249,7 @@ jobs:
           for asset in \
             "sendreq-$version-windows-x64-setup.exe" \
             "sendreq-$version-windows-x64.zip" \
+            "sendreq-$version-windows-x64.msi" \
             "sendreq-$version-macos-x64.dmg" \
             "sendreq-$version-linux-amd64.deb" \
             "sendreq-$version-linux-x86_64.rpm"; do

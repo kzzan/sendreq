@@ -7,12 +7,12 @@
     Version="$(var.ProductVersion)"
     Manufacturer="sendreq"
     UpgradeCode="{D8F725C4-8A38-4ED7-B2CE-0EBE70C511F2}">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" />
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="x64" />
     <MajorUpgrade DowngradeErrorMessage="A newer version of sendreq is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
+      <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="sendreq" />
       </Directory>
     </Directory>
