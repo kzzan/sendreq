@@ -68,7 +68,7 @@ class SessionContractPublishingService implements ContractPublishingService {
     );
     try {
       final now = _now().toUtc();
-      return saveMockServer(
+      return await saveMockServer(
         MockServer(
           id: ref.id,
           name: '${definition.method} ${definition.path}',

@@ -135,7 +135,7 @@ Future<String> _get(Uri uri) async {
   try {
     final response = await (await client.getUrl(uri)).close();
     expect(response.statusCode, HttpStatus.ok);
-    return response.transform(utf8.decoder).join();
+    return await response.transform(utf8.decoder).join();
   } finally {
     client.close(force: true);
   }
