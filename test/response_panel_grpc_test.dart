@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sendreq/data/services/proto_source_parser.dart';
-import 'package:sendreq/domain/grpc/protobuf_descriptor_set.dart';
 import 'package:sendreq/domain/grpc/grpc_transport.dart';
 import 'package:sendreq/domain/module_boundaries/module_ports.dart';
 import 'package:sendreq/ui/features/requests/output/widgets/response_panel.dart';
