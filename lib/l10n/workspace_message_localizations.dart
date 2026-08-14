@@ -1,9 +1,8 @@
-import 'generated/app_localizations.dart';
+import 'package:sendreq/l10n/generated/app_localizations.dart';
 
-/// Localizes ViewModel feedback while keeping presentation-independent state.
+/// 对 ViewModel 的反馈做本地化，同时保持与展示无关的状态。
 ///
-/// Runtime and repository errors are intentionally returned unchanged because
-/// their content comes from external systems rather than the application UI.
+/// 全局通知只应传入应用自有安全文案；无法识别的内容仅供局部状态展示。
 extension WorkspaceMessageLocalizations on String? {
   /// 将运行时/仓库返回的消息映射为本地化文案，无法识别时原样返回。
   String? localized(AppLocalizations l10n) {
@@ -21,7 +20,9 @@ extension WorkspaceMessageLocalizations on String? {
       );
     }
     // 识别“xx created.”这类简单模式。
-    final collectionMatch = RegExp(r'^(.+) created\.$').firstMatch(message);
+    final collectionMatch = RegExp(
+      r'^(?!Environment created\.$|Mock Server created\.$)(.+) created\.$',
+    ).firstMatch(message);
     if (collectionMatch != null) {
       return l10n.collectionCreated(collectionMatch.group(1)!);
     }
@@ -93,15 +94,24 @@ extension WorkspaceMessageLocalizations on String? {
     if (unknownField.isNotEmpty) {
       return l10n.unknownProtobufField(unknownField.first.group(1)!);
     }
+    final grpcEnvironmentBearerFailure = RegExp(
+      r'^Bearer authentication failed\. This call uses the Environment Bearer token from (.+)\. Switch to the intended environment or update its Bearer token, then restart the call\.$',
+    ).firstMatch(message);
+    if (grpcEnvironmentBearerFailure != null) {
+      return l10n.grpcEnvironmentBearerAuthenticationFailed(
+        grpcEnvironmentBearerFailure.group(1)!,
+      );
+    }
 
     // 其余固定文案按表映射为本地化文本。
     return switch (message) {
       'Paste valid OpenAPI JSON.' => l10n.validOpenApiJsonRequired,
-      'Preferences saved.' => l10n.preferencesSaved,
       'Could not save preferences. Retry.' => l10n.preferencesSaveFailed,
-      'Could not prepare documentation output folder.' =>
-        l10n.documentationOutputDirectoryPrepareFailed,
+      'Environment created.' => l10n.environmentCreated,
+      'Environment renamed.' => l10n.environmentRenamed,
+      'Environment deleted.' => l10n.environmentDeleted,
       'Environment changes saved.' => l10n.environmentChangesSaved,
+      'Environment changes discarded.' => l10n.environmentChangesDiscarded,
       'Could not save environment changes. Retry.' =>
         l10n.environmentSaveFailed,
       'Collection deleted.' => l10n.collectionDeleted,
@@ -111,14 +121,34 @@ extension WorkspaceMessageLocalizations on String? {
       'Collection renamed.' => l10n.collectionRenamed,
       'Folder renamed.' => l10n.folderRenamed,
       'Request changes saved.' => l10n.requestChangesSaved,
+      'Demo example loaded.' => l10n.demoExampleLoaded,
       'WebSocket URL must use ws:// or wss://.' => l10n.webSocketUrlRequired,
       'WebSocket connection timed out.' => l10n.webSocketConnectionTimedOut,
       'The original request was deleted.' => l10n.originalRequestDeletedNotice,
-      'Quick Mock started.' => l10n.mockServerStarted,
-      'Quick Mock stopped.' => l10n.mockServerStopped,
-      'Could not start Quick Mock. Retry.' => l10n.mockServerStartFailed,
-      'Could not stop Quick Mock. Retry.' => l10n.mockServerStopFailed,
-      'No saveable changes in the active resource.' => l10n.noSaveableChanges,
+      'Mock Server saved.' => l10n.mockServerSaved,
+      'Mock Server created.' => l10n.mockServerCreated,
+      'Could not create Mock Server. Retry.' => l10n.mockServerCreateFailed,
+      'Could not load saved Mock Servers.' => l10n.mockServersLoadFailed,
+      'Could not import proto source. Review the file and try again.' =>
+        l10n.protoSourceImportFailed,
+      'Could not import descriptor set. Review the file and try again.' =>
+        l10n.descriptorSetImportFailed,
+      'Server reflection failed. Review the endpoint and try again.' =>
+        l10n.grpcReflectionFailed,
+      'Could not save Mock Server. Retry.' => l10n.mockServerSaveFailed,
+      'Mock Server started.' => l10n.mockServerStartedSaved,
+      'Could not start Mock Server. Retry.' => l10n.mockServerStartSavedFailed,
+      'Mock Server stopped.' => l10n.mockServerStoppedSaved,
+      'Could not stop Mock Server. Retry.' => l10n.mockServerStopSavedFailed,
+      'Mock Server archived.' => l10n.mockServerArchived,
+      'Could not archive Mock Server. Retry.' => l10n.mockServerArchiveFailed,
+      'Mock Server deleted.' => l10n.mockServerDeleted,
+      'Could not delete Mock Server. Retry.' => l10n.mockServerDeleteFailed,
+      'Could not clear notifications. Retry.' => l10n.notificationsClearFailed,
+      'The source request is no longer available.' =>
+        l10n.sourceRequestUnavailable,
+      'The source response snapshot is no longer available.' =>
+        l10n.sourceResponseUnavailable,
       'Send is available when an active request is open.' =>
         l10n.sendActiveRequestRequired,
       'Connect before sending a message.' => l10n.connectBeforeSending,
@@ -137,14 +167,20 @@ extension WorkspaceMessageLocalizations on String? {
       'Enter a JSON request body before formatting.' =>
         l10n.enterJsonRequestBodyBeforeFormatting,
       'The request body is not valid JSON.' => l10n.requestBodyNotValidJson,
-      'Send a request before creating a Quick Mock.' =>
-        l10n.sendRequestBeforeMockDraft,
-      'Send a request before creating documentation.' =>
-        l10n.sendRequestBeforeDocumentation,
-      'Create a Quick Mock before starting it.' =>
-        l10n.createMockDraftBeforeStartingServer,
       'Connection closed.' => l10n.connectionClosed,
       'Connection failed.' => l10n.connectionFailed,
+      'Authentication failed. Update the active environment token and reconnect.' =>
+        l10n.webSocketAuthenticationFailed,
+      'Authentication failed. Update the active environment token and restart the call.' =>
+        l10n.grpcAuthenticationFailed,
+      'Bearer authentication failed. This call uses the request Bearer token. Update the request token, then restart the call.' =>
+        l10n.grpcRequestBearerAuthenticationFailed,
+      'API key authentication failed. Update the request API key name and value, then restart the call.' =>
+        l10n.grpcApiKeyAuthenticationFailed,
+      'Basic authentication failed. Update the request username and password, then restart the call.' =>
+        l10n.grpcBasicAuthenticationFailed,
+      'Authentication is required by this gRPC method. Configure the expected request or environment authentication, then restart the call.' =>
+        l10n.grpcAuthenticationRequired,
       'Paste an OpenAPI 3.x JSON document with a paths object.' =>
         l10n.pasteOpenApi3JsonRequired,
       'No supported HTTP operations found.' => l10n.noSupportedHttpOperations,

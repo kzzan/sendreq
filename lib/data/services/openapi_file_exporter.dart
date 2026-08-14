@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:sendreq/domain/api_assets/openapi_exchange.dart';
+
 /// 将 OpenAPI JSON 写入接口文档输出目录。
-class OpenApiFileExporter {
+class OpenApiFileExporter implements OpenApiFileExportPort {
   /// 创建 OpenAPI 文件导出器。
   const OpenApiFileExporter();
 
@@ -20,6 +22,16 @@ class OpenApiFileExporter {
     await file.writeAsString(source, flush: true);
     return file;
   }
+
+  @override
+  Future<OpenApiFileExportResult> write(
+    OpenApiFileExportRequest request,
+  ) async => OpenApiFileExportResult(
+    path: (await export(
+      outputDirectory: request.outputDirectory,
+      source: request.source,
+    )).path,
+  );
 
   /// 生成跨平台安全且可排序的 OpenAPI 文件名。
   String fileNameFor(DateTime timestamp) {

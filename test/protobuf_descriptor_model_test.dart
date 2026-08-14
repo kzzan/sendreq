@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sendreq/data/services/protobuf_descriptor_set.dart';
+import 'package:sendreq/domain/grpc/protobuf_descriptor_set.dart';
 
 void main() {
   // 动态描述模型须同时承载 Protobuf 约束和 gRPC service/RPC 元数据。

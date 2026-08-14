@@ -8,6 +8,8 @@ import 'package:sendreq/data/repositories/in_memory_environment_store.dart';
 import 'package:sendreq/data/repositories/in_memory_workspace_preference_store.dart';
 import 'package:sendreq/data/repositories/isar_api_asset_repository.dart';
 import 'package:sendreq/data/repositories/isar_environment_store.dart';
+import 'package:sendreq/data/repositories/isar_mock_server_repository.dart';
+import 'package:sendreq/data/repositories/isar_user_notice_repository.dart';
 
 import 'support/isar_test_core.dart';
 
@@ -26,7 +28,6 @@ void main() {
         loadLegacyAssets: () async => legacy,
         openWorkspace: () =>
             Future<IsarWorkspace>.error(StateError('database unavailable')),
-        outputDirectory: '${directory.path}${Platform.pathSeparator}docs',
       );
 
       final result = await startup.initialize();
@@ -44,7 +45,6 @@ void main() {
         identical(result.workspaceDependencies.assetRepository, legacy),
         isFalse,
       );
-      expect(result.workspaceDependencies.historyStore, isNull);
     },
   );
 
@@ -66,7 +66,6 @@ void main() {
         openWorkspace: () => Future<IsarWorkspace>.error(
           StateError('must not open after invalid legacy source'),
         ),
-        outputDirectory: '${directory.path}${Platform.pathSeparator}docs',
       );
 
       final result = await startup.initialize();
@@ -97,7 +96,6 @@ void main() {
           }
           return IsarWorkspace.open(directory: directory);
         },
-        outputDirectory: '${directory.path}${Platform.pathSeparator}docs',
       );
       final controller = await DesktopPersistenceStartupController.start(
         startup,
@@ -110,6 +108,14 @@ void main() {
       expect(controller.isRetrying, isFalse);
       expect(controller.result.requiresRecovery, isFalse);
       expect(controller.result.workspace, isNotNull);
+      expect(
+        controller.result.workspaceDependencies.mockServerRepository,
+        isA<IsarMockServerRepository>(),
+      );
+      expect(
+        controller.result.workspaceDependencies.userNoticeRepository,
+        isA<IsarUserNoticeRepository>(),
+      );
     },
   );
 }
@@ -117,7 +123,6 @@ void main() {
 DesktopPersistenceStartup _startup({
   required Future<FileApiAssetRepository> Function() loadLegacyAssets,
   required Future<IsarWorkspace> Function() openWorkspace,
-  required String outputDirectory,
 }) => DesktopPersistenceStartup(
   createPreferenceStore: () async => InMemoryWorkspacePreferenceStore(),
   loadLegacyAssets: loadLegacyAssets,
@@ -129,5 +134,4 @@ DesktopPersistenceStartup _startup({
   loadIsarEnvironmentStore: (workspace) =>
       IsarEnvironmentStore.load(workspace: workspace),
   loadEnvironmentStore: () async => InMemoryEnvironmentStore.sample(),
-  resolveDefaultDocumentationOutputDirectory: () async => outputDirectory,
 );

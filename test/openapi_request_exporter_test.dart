@@ -37,9 +37,19 @@ void main() {
     );
 
     final roundTripped = const OpenApiRequestImporter().parse(source);
-    expect(roundTripped, hasLength(5));
-    expect(roundTripped.first.urlTemplate, 'http://127.0.0.1:8081/api/v1/users');
+    expect(roundTripped, hasLength(6));
+    expect(
+      roundTripped.first.urlTemplate,
+      'http://127.0.0.1:8081/api/v1/users',
+    );
     expect(roundTripped.first.queryParams.first.key, 'page');
+    expect(
+      roundTripped
+          .singleWhere((request) => request.name == 'API key users')
+          .authentication
+          .usesApiKey,
+      isTrue,
+    );
   });
 
   test('exports and imports Basic and API Key security schemes', () {
@@ -88,4 +98,71 @@ void main() {
     expect(imported.last.authentication.usesApiKey, isTrue);
     expect(imported.last.authentication.apiKeyName, 'X-API-Key');
   });
+
+  test(
+    'exports structured form examples and excludes multipart local files',
+    () {
+      const base = ApiRequestDefinition(
+        id: 'form',
+        collectionId: 'collection',
+        folderId: 'folder',
+        name: 'Submit form',
+        method: 'POST',
+        urlTemplate: 'https://api.example.test/forms',
+        queryParams: [],
+        headers: [
+          ApiField(
+            key: 'Content-Type',
+            value: 'application/x-www-form-urlencoded',
+          ),
+        ],
+        bodyTemplate: 'stale=raw',
+        formUrlEncodedFields: [
+          ApiField(key: 'name', value: 'Mary Jane'),
+          ApiField(key: 'disabled', value: 'no', enabled: false),
+          ApiField(key: 'token', value: '{{token}}', secretReference: true),
+        ],
+      );
+      final multipart = base.copyWith(
+        id: 'multipart',
+        urlTemplate: 'https://api.example.test/files',
+        headers: const [
+          ApiField(key: 'Content-Type', value: 'multipart/form-data'),
+        ],
+        multipartFields: const [ApiField(key: 'title', value: 'Profile')],
+        multipartFiles: const [
+          ApiFileField(
+            key: 'file',
+            path: '/private/local/avatar.png',
+            fileName: 'avatar.png',
+            sizeBytes: 42,
+          ),
+        ],
+      );
+
+      final document = const OpenApiRequestExporter().toJson(
+        requests: [base, multipart],
+      );
+      final paths = document['paths'] as Map<String, Object?>;
+      final formBody =
+          (((paths['/forms'] as Map)['post'] as Map)['requestBody']
+                  as Map)['content']
+              as Map;
+      final multipartBody =
+          (((paths['/files'] as Map)['post'] as Map)['requestBody']
+                  as Map)['content']
+              as Map;
+
+      expect(formBody['application/x-www-form-urlencoded'], {
+        'example': {'name': 'Mary Jane'},
+      });
+      expect(multipartBody['multipart/form-data'], {
+        'example': {'title': 'Profile'},
+      });
+      expect(
+        jsonEncode(document),
+        isNot(contains('/private/local/avatar.png')),
+      );
+    },
+  );
 }

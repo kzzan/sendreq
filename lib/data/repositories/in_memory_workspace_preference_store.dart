@@ -1,5 +1,5 @@
-import '../../domain/preferences/workspace_preferences.dart';
-import '../../domain/repositories/workspace_preference_store.dart';
+import 'package:sendreq/domain/preferences/workspace_preferences.dart';
+import 'package:sendreq/domain/repositories/workspace_preference_store.dart';
 
 /// 基于内存的工作区偏好存储，仅供原型使用，重启后数据丢失。
 class InMemoryWorkspacePreferenceStore implements WorkspacePreferenceStore {

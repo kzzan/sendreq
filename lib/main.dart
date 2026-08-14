@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'app/desktop_persistence_startup.dart';
-import 'app/desktop_window_controls.dart';
-import 'app/sendreq_app.dart';
-import 'app/window_spec.dart';
+import 'package:sendreq/app/desktop_persistence_startup.dart';
+import 'package:sendreq/app/desktop_window_controls.dart';
+import 'package:sendreq/app/sendreq_app.dart';
+import 'package:sendreq/app/window_spec.dart';
 
 /// 应用启动入口：初始化窗口环境、桌面控件与偏好存储后启动 Flutter 应用。
 Future<void> main() async {

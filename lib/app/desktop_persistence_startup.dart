@@ -1,27 +1,29 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/database/isar_workspace.dart';
-import '../data/repositories/file_api_asset_repository.dart';
-import '../data/repositories/file_environment_store.dart';
-import '../data/repositories/file_workspace_preference_store.dart';
-import '../data/repositories/in_memory_api_asset_repository.dart';
-import '../data/repositories/in_memory_environment_store.dart';
-import '../data/repositories/in_memory_workspace_preference_store.dart';
-import '../data/repositories/isar_api_asset_repository.dart';
-import '../data/repositories/isar_environment_store.dart';
-import '../data/repositories/isar_execution_history_store.dart';
-import '../data/repositories/shared_preferences_workspace_preference_store.dart';
-import '../data/services/documentation_output_directory.dart';
-import '../domain/models/workspace_models.dart';
-import '../domain/repositories/api_asset_repository.dart';
-import '../domain/repositories/environment_store.dart';
-import '../domain/repositories/execution_history_store.dart';
-import '../domain/repositories/workspace_preference_store.dart';
-import '../features/workspace/application/workspace_dependencies.dart';
-import '../features/workspace/application/workspace_startup_recovery.dart';
+import 'package:sendreq/data/database/isar_workspace.dart';
+import 'package:sendreq/data/repositories/file_api_asset_repository.dart';
+import 'package:sendreq/data/repositories/file_environment_store.dart';
+import 'package:sendreq/data/repositories/file_workspace_preference_store.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
+import 'package:sendreq/data/repositories/in_memory_environment_store.dart';
+import 'package:sendreq/data/repositories/in_memory_mock_server_repository.dart';
+import 'package:sendreq/data/repositories/in_memory_user_notice_repository.dart';
+import 'package:sendreq/data/repositories/in_memory_workspace_preference_store.dart';
+import 'package:sendreq/data/repositories/isar_api_asset_repository.dart';
+import 'package:sendreq/data/repositories/isar_environment_store.dart';
+import 'package:sendreq/data/repositories/isar_mock_server_repository.dart';
+import 'package:sendreq/data/repositories/isar_user_notice_repository.dart';
+import 'package:sendreq/data/repositories/shared_preferences_workspace_preference_store.dart';
+import 'package:sendreq/domain/repositories/api_asset_repository.dart';
+import 'package:sendreq/domain/repositories/environment_store.dart';
+import 'package:sendreq/domain/repositories/mock_server_repository.dart';
+import 'package:sendreq/domain/notifications/user_notice_repository.dart';
+import 'package:sendreq/domain/repositories/workspace_preference_store.dart';
+import 'package:sendreq/ui/shell/application/workspace_dependencies.dart';
+import 'package:sendreq/data/demo/demo_example_catalog.dart';
+import 'package:sendreq/ui/shell/application/workspace_startup_recovery.dart';
 
-/// 启动迁移的可观察阶段。阶段顺序反映依赖关系：偏好完成后，才读取工作区；
-/// History 仅在工作区可用时加载。
+/// 启动迁移的可观察阶段。阶段顺序反映依赖关系：偏好完成后，才读取工作区。
 enum PersistenceStartupStage {
   /// 偏好存储的加载与迁移。
   preferences,
@@ -29,14 +31,8 @@ enum PersistenceStartupStage {
   /// 工作区数据库的打开与资产迁移。
   workspace,
 
-  /// 最近执行历史的读取。
-  history,
-
   /// 环境配置的加载。
   environments,
-
-  /// 默认文档输出目录的解析与创建。
-  documentationOutput,
 }
 
 /// 某个启动阶段的结果。失败不会删除或覆盖旧文件。
@@ -104,7 +100,6 @@ class DesktopPersistenceStartup {
     required this.loadIsarAssets,
     required this.loadIsarEnvironmentStore,
     required this.loadEnvironmentStore,
-    required this.resolveDefaultDocumentationOutputDirectory,
   });
 
   /// 构建生产环境的启动组合：SharedPreferences 偏好 + 文件/Isar 持久化。
@@ -126,8 +121,6 @@ class DesktopPersistenceStartup {
     // Isar 不可用时使用内存回退；旧 JSON 仅作为 Isar 首次迁移来源，
     // 不再成为跨平台运行时的第二套可写存储。
     loadEnvironmentStore: () async => InMemoryEnvironmentStore.sample(),
-    resolveDefaultDocumentationOutputDirectory:
-        DocumentationOutputDirectory.defaultPathForCurrentUser,
   );
 
   /// 创建偏好存储的工厂。
@@ -152,9 +145,6 @@ class DesktopPersistenceStartup {
 
   /// 加载环境存储的工厂。
   final Future<EnvironmentStore> Function() loadEnvironmentStore;
-
-  /// 解析默认文档输出目录的工厂。
-  final Future<String> Function() resolveDefaultDocumentationOutputDirectory;
 
   /// 按依赖顺序执行全部启动阶段；单阶段失败不阻断其余阶段。
   Future<DesktopPersistenceStartupResult> initialize() async {
@@ -204,33 +194,19 @@ class DesktopPersistenceStartup {
     }
 
     IsarWorkspace? workspace;
-    ExecutionHistoryStore? historyStore;
-    List<ExecutionRecord> history = const [];
+    MockServerRepository mockServerRepository = InMemoryMockServerRepository();
+    UserNoticeRepository userNoticeRepository = InMemoryUserNoticeRepository();
     // 第三阶段：旧资产可用时才打开 Isar 工作区并迁移资产。
     if (!statuses.containsKey(PersistenceStartupStage.workspace)) {
       try {
         workspace = await openWorkspace();
         assets = await loadIsarAssets(workspace, legacyAssets);
+        mockServerRepository = IsarMockServerRepository(workspace);
+        userNoticeRepository = IsarUserNoticeRepository(workspace);
         statuses[PersistenceStartupStage.workspace] =
             const PersistenceStartupStageStatus.success(
               PersistenceStartupStage.workspace,
             );
-        // 历史仅在工作区打开成功后加载；失败不影响工作区使用。
-        try {
-          historyStore = IsarExecutionHistoryStore(workspace);
-          history = await historyStore.loadRecent(limit: 8);
-          statuses[PersistenceStartupStage.history] =
-              const PersistenceStartupStageStatus.success(
-                PersistenceStartupStage.history,
-              );
-        } on Object catch (error) {
-          historyStore = null;
-          statuses[PersistenceStartupStage.history] =
-              PersistenceStartupStageStatus.failure(
-                PersistenceStartupStage.history,
-                error,
-              );
-        }
       } on Object catch (error) {
         // 工作区打开失败时关闭已打开的连接并使用内存仓库。旧文件保持
         // 不变，恢复提示可引导用户重试迁移，避免恢复到已废弃的可写后端。
@@ -241,18 +217,7 @@ class DesktopPersistenceStartup {
               PersistenceStartupStage.workspace,
               error,
             );
-        // 历史阶段无需执行，直接记为成功。
-        statuses[PersistenceStartupStage.history] =
-            const PersistenceStartupStageStatus.success(
-              PersistenceStartupStage.history,
-            );
       }
-    } else {
-      // 旧资产阶段已失败：跳过工作区，历史阶段直接记为成功。
-      statuses[PersistenceStartupStage.history] =
-          const PersistenceStartupStageStatus.success(
-            PersistenceStartupStage.history,
-          );
     }
 
     // 第四阶段：优先从 Isar 加载环境，数据库不可用时保留文件回退。
@@ -275,34 +240,14 @@ class DesktopPersistenceStartup {
           );
     }
 
-    // 第五阶段：解析默认文档输出目录并确保其存在。
-    String? documentationOutputDirectory;
-    try {
-      documentationOutputDirectory =
-          await resolveDefaultDocumentationOutputDirectory();
-      await DocumentationOutputDirectory.ensureExists(
-        documentationOutputDirectory,
-      );
-      statuses[PersistenceStartupStage.documentationOutput] =
-          const PersistenceStartupStageStatus.success(
-            PersistenceStartupStage.documentationOutput,
-          );
-    } on Object catch (error) {
-      statuses[PersistenceStartupStage.documentationOutput] =
-          PersistenceStartupStageStatus.failure(
-            PersistenceStartupStage.documentationOutput,
-            error,
-          );
-    }
-
     return DesktopPersistenceStartupResult(
       workspaceDependencies: WorkspaceDependencies(
         preferenceStore: preferences,
         assetRepository: assets,
         environmentStore: environments,
-        historyStore: historyStore,
-        initialHistory: history,
-        defaultDocumentationOutputDirectory: documentationOutputDirectory,
+        mockServerRepository: mockServerRepository,
+        userNoticeRepository: userNoticeRepository,
+        demoCollection: DemoExampleCatalog.collection,
       ),
       stageStatuses: Map.unmodifiable(statuses),
       workspace: workspace,

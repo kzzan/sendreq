@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../../domain/preferences/workspace_preferences.dart';
-import '../../domain/repositories/workspace_preference_store.dart';
+import 'package:sendreq/domain/preferences/workspace_preferences.dart';
+import 'package:sendreq/domain/repositories/workspace_preference_store.dart';
 
 /// 将工作区偏好设置持久化到 JSON 配置文件的实现。
 ///
@@ -37,45 +37,38 @@ class FileWorkspacePreferenceStore implements WorkspacePreferenceStore {
         (value['version'] != 1 &&
             value['version'] != 2 &&
             value['version'] != 3 &&
-            value['version'] != 4)) {
+            value['version'] != 4 &&
+            value['version'] != 5 &&
+            value['version'] != 6)) {
       throw const FormatException('Unsupported legacy preference format.');
     }
     final appearance = _appearance(value['appearance']);
-    final shortcut = _shortcut(value['sendShortcut']);
     // 各版本新增字段：旧版本按字段引入的版本提供默认值。
     final locale = value['version'] == 1
         ? LocalePreference.system
         : _locale(value['locale']);
-    final font = value['version'] == 3 || value['version'] == 4
+    final font =
+        value['version'] == 3 || value['version'] == 4 || value['version'] == 5
         ? _font(value['font'])
-        : WorkspaceFontPreference.inter;
-    final customShortcut = value['version'] == 3 || value['version'] == 4
-        ? ShortcutBinding.fromJson(value['customSendShortcut'])
-        : ShortcutBinding.controlEnter;
-    final rawDocumentationOutputDirectory = value['version'] == 4
-        ? value['documentationOutputDirectory']
-        : null;
-    final documentationOutputDirectory =
-        rawDocumentationOutputDirectory is String &&
-            rawDocumentationOutputDirectory.trim().isNotEmpty
-        ? rawDocumentationOutputDirectory.trim()
-        : null;
+        : WorkspacePreferences.defaults.font;
+    final codeFont = value['version'] == 6
+        ? _codeFont(value['codeFont'])
+        : CodeFontPreference.jetBrainsMono;
+    final codeFontSize = value['version'] == 6 && value['codeFontSize'] is num
+        ? (value['codeFontSize'] as num).toDouble().clamp(10, 18).toDouble()
+        : 12.0;
     if (appearance == null ||
-        shortcut == null ||
         locale == null ||
         font == null ||
-        customShortcut == null ||
-        (rawDocumentationOutputDirectory != null &&
-            documentationOutputDirectory == null)) {
+        codeFont == null) {
       throw const FormatException('Invalid legacy preference values.');
     }
     return WorkspacePreferences(
       appearance: appearance,
-      sendShortcut: shortcut,
       locale: locale,
       font: font,
-      customSendShortcut: customShortcut,
-      documentationOutputDirectory: documentationOutputDirectory,
+      codeFont: codeFont,
+      codeFontSize: codeFontSize,
     );
   }
 
@@ -88,14 +81,12 @@ class FileWorkspacePreferenceStore implements WorkspacePreferenceStore {
     final temporary = File('${_file.path}.tmp');
     await temporary.writeAsString(
       jsonEncode({
-        'version': 4,
+        'version': 6,
         'appearance': preferences.appearance.name,
-        'sendShortcut': preferences.sendShortcut.name,
         'locale': preferences.locale.name,
         'font': preferences.font.name,
-        'customSendShortcut': preferences.customSendShortcut.toJson(),
-        'documentationOutputDirectory':
-            preferences.documentationOutputDirectory,
+        'codeFont': preferences.codeFont.name,
+        'codeFontSize': preferences.codeFontSize.clamp(10, 18),
       }),
       flush: true,
     );
@@ -141,14 +132,6 @@ class FileWorkspacePreferenceStore implements WorkspacePreferenceStore {
     _ => null,
   };
 
-  /// 将存储字符串解析为发送快捷键偏好，无法识别时返回 null。
-  SendShortcutPreference? _shortcut(Object? value) => switch (value) {
-    'controlEnter' => SendShortcutPreference.controlEnter,
-    'controlSpace' => SendShortcutPreference.controlSpace,
-    'custom' => SendShortcutPreference.custom,
-    _ => null,
-  };
-
   /// 将存储字符串解析为语言偏好，无法识别时返回 null。
   LocalePreference? _locale(Object? value) => switch (value) {
     'system' => LocalePreference.system,
@@ -159,9 +142,17 @@ class FileWorkspacePreferenceStore implements WorkspacePreferenceStore {
 
   /// 将存储字符串解析为字体偏好，无法识别时返回 null。
   WorkspaceFontPreference? _font(Object? value) => switch (value) {
-    'inter' => WorkspaceFontPreference.inter,
+    // Historical unbundled families migrate to the reliable system font.
+    'fluent' || 'segoeUi' || 'inter' => WorkspaceFontPreference.system,
     'notoSans' => WorkspaceFontPreference.notoSans,
     'system' => WorkspaceFontPreference.system,
+    _ => null,
+  };
+
+  CodeFontPreference? _codeFont(Object? value) => switch (value) {
+    'jetBrainsMono' => CodeFontPreference.jetBrainsMono,
+    'sourceCodePro' => CodeFontPreference.system,
+    'system' => CodeFontPreference.system,
     _ => null,
   };
 }

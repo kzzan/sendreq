@@ -15,10 +15,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSubtitle => 'Local workspace preferences';
 
   @override
-  String get savePreferences => 'Save preferences';
+  String get saved => 'Saved';
 
   @override
-  String get saved => 'Saved';
+  String get preferencesSaved => 'Saved automatically';
+
+  @override
+  String get preferencesSaving => 'Saving...';
+
+  @override
+  String get preferencesSaveFailedShort => 'Save failed';
 
   @override
   String get appearance => 'Appearance';
@@ -28,11 +34,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose how sendreq matches your desktop.';
 
   @override
-  String get font => 'Font';
+  String get font => 'Interface font';
 
   @override
   String get fontDescription =>
-      'Apply a readable interface font. Code and data stay monospaced.';
+      'Choose the font used by navigation, labels, and controls.';
+
+  @override
+  String get codeFont => 'Code font';
+
+  @override
+  String get codeFontDescription =>
+      'Choose the monospaced font used by requests, JSON, and timelines.';
+
+  @override
+  String get codeFontSize => 'Code size';
+
+  @override
+  String get codeFontSizeDescription =>
+      'Set the base size for code and structured data.';
 
   @override
   String get light => 'Light';
@@ -51,125 +71,61 @@ class AppLocalizationsEn extends AppLocalizations {
       'Choose the language used throughout sendreq.';
 
   @override
+  String get updates => 'Updates';
+
+  @override
+  String get updateDescription =>
+      'Check GitHub Releases for a newer sendreq desktop version.';
+
+  @override
+  String get checkForUpdates => 'Check for updates';
+
+  @override
+  String get checkingForUpdates => 'Checking GitHub Releases...';
+
+  @override
+  String get updateCheckNotRun => 'No update check has been run.';
+
+  @override
+  String appIsUpToDate(String version) {
+    return 'Version $version is up to date.';
+  }
+
+  @override
+  String appUpdateAvailable(String version) {
+    return 'Version $version is available.';
+  }
+
+  @override
+  String get updateCheckFailed => 'Could not check GitHub Releases. Try again.';
+
+  @override
+  String get updateNow => 'Update';
+
+  @override
   String get english => 'English';
 
   @override
   String get simplifiedChinese => 'Simplified Chinese';
 
   @override
-  String get keyboardShortcuts => 'Keyboard shortcuts';
-
-  @override
   String get sendRequest => 'Send request';
 
   @override
-  String get sendShortcutDescription =>
-      'Choose the shortcut used by the global Send action.';
-
-  @override
-  String get shortcutConflictWarning =>
-      'Ctrl+Space can conflict with input methods or editor completion.';
-
-  @override
-  String get customShortcut => 'Custom shortcut';
-
-  @override
-  String get noCustomShortcut => 'Not configured';
-
-  @override
-  String get recordShortcut => 'Record shortcut';
-
-  @override
-  String get recordShortcutHint => 'Press a key combination. Esc cancels.';
-
-  @override
-  String get shortcutModifierRequired =>
-      'Use Ctrl, Cmd, Alt, or Shift with another key.';
-
-  @override
-  String get shortcutReserved => 'Ctrl/Cmd+K and Ctrl/Cmd+S are reserved.';
-
-  @override
-  String get shortcutUnavailable => 'This shortcut cannot be used.';
-
-  @override
-  String shortcutUpdated(String shortcut) {
-    return 'Send shortcut set to $shortcut.';
-  }
-
-  @override
   String get resetPreferencesDescription =>
-      'Reset only restores preferences. Requests, environments, and history remain unchanged.';
+      'Reset only restores preferences. Requests and environments remain unchanged.';
 
   @override
   String get resetDefaults => 'Reset defaults';
 
   @override
-  String get preferencesSaved => 'Preferences saved';
-
-  @override
   String get preferencesSaveFailed => 'Could not save preferences. Retry.';
 
   @override
-  String get documentationExport => 'Documentation export';
-
-  @override
-  String get documentationOutputDirectoryDescription =>
-      'Choose where exported Markdown API references are written.';
-
-  @override
-  String get noDocumentationOutputDirectory => 'No output folder selected';
-
-  @override
-  String get chooseDocumentationOutputFolder =>
-      'Choose documentation output folder';
-
-  @override
-  String get chooseOutputDirectory => 'Choose output folder';
-
-  @override
-  String get changeOutputDirectory => 'Change output folder';
-
-  @override
-  String get defaultOutputDirectory => 'Default folder';
-
-  @override
-  String get customOutputDirectory => 'Custom folder';
-
-  @override
-  String get restoreDefaultOutputDirectory => 'Use default output folder';
-
-  @override
-  String documentationOutputDirectoryUnavailable(String error) {
-    return 'The output folder could not be created: $error';
-  }
-
-  @override
-  String get documentationOutputDirectoryPrepareFailed =>
-      'Could not create the documentation output folder. Choose another folder and try again.';
-
-  @override
-  String get clearOutputDirectory => 'Clear output folder';
-
-  @override
-  String get configureDocumentationOutputDirectory =>
-      'Choose a documentation output folder in Settings before exporting.';
-
-  @override
-  String get exportMarkdown => 'Export Markdown';
-
-  @override
-  String markdownExportedTo(String path) {
-    return 'Markdown documentation exported to $path.';
-  }
-
-  @override
-  String markdownExportFailed(String error) {
-    return 'Could not export Markdown documentation: $error';
-  }
-
-  @override
   String get environmentChangesSaved => 'Environment changes saved.';
+
+  @override
+  String get environmentChangesDiscarded => 'Environment changes discarded.';
 
   @override
   String get environmentChangesPending => 'Environment changes are not saved.';
@@ -177,6 +133,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get environmentSaveFailed =>
       'Could not save environment changes. Retry.';
+
+  @override
+  String get environmentCreated => 'Environment created.';
+
+  @override
+  String get environmentRenamed => 'Environment renamed.';
+
+  @override
+  String get environmentDeleted => 'Environment deleted.';
+
+  @override
+  String get demoExampleLoaded => 'Demo example loaded.';
 
   @override
   String get invalidHttpStatus => 'Enter an HTTP status from 100 to 599.';
@@ -203,7 +171,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionRenamed => 'Collection renamed.';
 
   @override
-  String get folderRenamed => 'Folder renamed.';
+  String get folderRenamed => 'Group renamed.';
 
   @override
   String get requestChangesSaved => 'Request changes saved.';
@@ -240,6 +208,133 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enabled request headers are sent as gRPC metadata.';
 
   @override
+  String get grpcMetadata => 'Metadata';
+
+  @override
+  String get grpcMessage => 'Message';
+
+  @override
+  String get grpcProto => 'Proto';
+
+  @override
+  String get grpcDeadline => 'Deadline';
+
+  @override
+  String get grpcDeadlineHint => 'Optional call timeout';
+
+  @override
+  String get millisecondsShort => 'ms';
+
+  @override
+  String get discoverGrpcServices => 'Discover services';
+
+  @override
+  String get discoveringGrpcServices => 'Discovering...';
+
+  @override
+  String get grpcSchemaFromReflection =>
+      'Services discovered from the active endpoint';
+
+  @override
+  String get grpcStartStream => 'Start stream';
+
+  @override
+  String get grpcSendMessage => 'Send message';
+
+  @override
+  String get grpcEndRequestStream => 'End sending';
+
+  @override
+  String get grpcClientStreaming => 'Client streaming';
+
+  @override
+  String get grpcServerStreaming => 'Server streaming';
+
+  @override
+  String get grpcBidirectionalStreaming => 'Bidirectional streaming';
+
+  @override
+  String get grpcUnary => 'Unary';
+
+  @override
+  String get grpcRequestMessage => 'Request message';
+
+  @override
+  String get grpcNoRequestSchema =>
+      'Select a service and RPC method to view request fields.';
+
+  @override
+  String get grpcNextStreamMessage => 'Next stream message';
+
+  @override
+  String get grpcCallPayload => 'Call payload';
+
+  @override
+  String get grpcWireInvalid => 'Invalid payload';
+
+  @override
+  String get grpcMessageSchema => 'Message schema';
+
+  @override
+  String get grpcFieldRepeated => 'repeated';
+
+  @override
+  String grpcFieldOneof(String name) {
+    return 'oneof: $name';
+  }
+
+  @override
+  String get grpcEventSent => 'Sent';
+
+  @override
+  String get grpcEventReceived => 'Received';
+
+  @override
+  String get grpcEventHeaders => 'Headers';
+
+  @override
+  String get grpcEventTrailers => 'Trailers';
+
+  @override
+  String get grpcEventStatus => 'Status';
+
+  @override
+  String get grpcEventError => 'Error';
+
+  @override
+  String get grpcRequestStreamOpen => 'Send open';
+
+  @override
+  String get grpcRequestStreamClosed => 'Send closed';
+
+  @override
+  String get grpcStateIdle => 'Idle';
+
+  @override
+  String get grpcStateStarting => 'Starting';
+
+  @override
+  String get grpcStateRunning => 'Running';
+
+  @override
+  String get grpcStateCompleted => 'Completed';
+
+  @override
+  String get grpcStateCancelling => 'Cancelling';
+
+  @override
+  String get grpcStateCancelled => 'Cancelled';
+
+  @override
+  String get grpcStateFailed => 'Failed';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get stop => 'Stop';
+
+  @override
   String get changeRequestProtocol => 'Change request protocol';
 
   @override
@@ -249,31 +344,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workspace => 'Workspace';
 
   @override
-  String get dashboard => 'Dashboard';
+  String get requests => 'Requests';
+
+  @override
+  String get allRequests => 'All requests';
+
+  @override
+  String get restRequests => 'REST';
+
+  @override
+  String get webSocketRequests => 'WebSocket';
+
+  @override
+  String get grpcRequests => 'gRPC';
+
+  @override
+  String get requestWorkingViews => 'Request types';
+
+  @override
+  String get mock => 'Mock';
+
+  @override
+  String get manage => 'Manage';
 
   @override
   String get collections => 'Collections';
 
   @override
-  String get collectionActions => 'Collection actions';
+  String get collectionResources => 'Collection resources';
 
   @override
-  String get history => 'History';
+  String get collectionActions => 'Collection actions';
 
   @override
   String get environments => 'Environments';
 
   @override
-  String get mockServers => 'Quick Mock';
+  String get savedMockServers => 'Saved Mock Servers';
 
   @override
-  String get documentation => 'Documentation';
+  String get saveAsMockServer => 'Save as Mock Server';
 
   @override
-  String get docs => 'Docs';
+  String get startMockServer => 'Start Server';
 
   @override
-  String get searchMetrics => 'Search metrics...';
+  String get stopMockServer => 'Stop Server';
+
+  @override
+  String mockEndpoints(int count) {
+    return '$count endpoints';
+  }
 
   @override
   String get searchRequests => 'Search requests...';
@@ -282,40 +403,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearSearch => 'Clear search';
 
   @override
-  String get searchHistory => 'Search history...';
-
-  @override
-  String get searchVariables => 'Search variables...';
-
-  @override
-  String get searchMocks => 'Search Quick Mock...';
-
-  @override
-  String get searchDocumentation => 'Search documentation...';
-
-  @override
-  String get searchSettings => 'Search settings...';
-
-  @override
-  String get openCommandPalette => 'Open command palette';
-
-  @override
   String get activeEnvironment => 'Active environment';
 
   @override
-  String get activeEnvironmentShort => 'ACTIVE ENV';
+  String get activeEnvironmentShort => 'ENV';
+
+  @override
+  String get environmentLabel => 'ENVIRONMENT';
+
+  @override
+  String get environmentLabelShort => 'ENV';
+
+  @override
+  String get manageEnvironments => 'Manage environments...';
+
+  @override
+  String get useForNextCall => 'USE FOR NEXT CALL';
+
+  @override
+  String get useForRequests => 'Use for requests';
+
+  @override
+  String editingEnvironment(String name) {
+    return 'Editing: $name';
+  }
+
+  @override
+  String environmentContextTooltip(String name) {
+    return 'Environment: $name. Switch or manage environments.';
+  }
+
+  @override
+  String currentSessionEnvironment(String name) {
+    return 'Current session: $name';
+  }
+
+  @override
+  String nextCallEnvironment(String name) {
+    return 'Next call: $name';
+  }
 
   @override
   String get variablesResolveBeforeSend => 'Variables resolve before sending.';
-
-  @override
-  String get openDocumentation => 'Open documentation';
-
-  @override
-  String get saveActiveResource => 'Save active resource';
-
-  @override
-  String get noSaveableChanges => 'No saveable changes';
 
   @override
   String get minimizeWindow => 'Minimize window';
@@ -343,13 +472,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get response => 'Response';
 
   @override
-  String get commandPalette => 'Command palette';
-
-  @override
-  String get searchCommands => 'Search commands';
-
-  @override
   String get noMatchingResources => 'No matching resources';
+
+  @override
+  String get requestProtocolFilter => 'Filter requests by protocol';
+
+  @override
+  String get allRequestProtocols => 'All request protocols';
 
   @override
   String get sendActiveRequest => 'Send active request';
@@ -375,10 +504,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noChanges => 'No changes';
 
   @override
+  String get unsavedEnvironmentChanges => 'Unsaved environment changes';
+
+  @override
+  String get discardEnvironmentChangesTitle => 'Discard environment changes?';
+
+  @override
+  String get discardEnvironmentChangesMessage =>
+      'Variables, authentication, and environment edits will return to the last saved version.';
+
+  @override
+  String get closeEnvironmentManagerTitle => 'Apply environment changes?';
+
+  @override
+  String get closeEnvironmentManagerMessage =>
+      'Apply these changes before returning to Requests, or discard them to restore the last saved environment.';
+
+  @override
   String get currentEnvironment => 'Current environment';
 
   @override
   String get selectCurrentEnvironment => 'Select current environment';
+
+  @override
+  String get selectEnvironmentToEdit => 'Select an environment to edit';
 
   @override
   String get newEnvironment => 'New environment';
@@ -432,8 +581,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get managedByAuthentication => 'Managed by Auth';
 
   @override
-  String get environmentAuditNote =>
-      'Saving changes creates a lightweight revision record. Full audit diffs will be available in a later release.';
+  String get environmentAuditNote => 'Changes take effect after Apply.';
 
   @override
   String get variableValue => 'Variable value';
@@ -448,7 +596,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteVariable => 'Delete variable';
 
   @override
-  String get requiredTokenVariable => 'Token is required for every environment';
+  String get requiredTokenVariable =>
+      'Managed by Bearer authentication for this environment';
 
   @override
   String get requiredEnvironmentBaseUrl =>
@@ -476,7 +625,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inheritEnvironmentAuthentication => 'Inherit environment';
 
   @override
-  String get requestSpecificAuthentication => 'Request-specific';
+  String get requestSpecificAuthentication =>
+      'Request only (does not inherit environment)';
 
   @override
   String get configureEnvironmentAuthentication =>
@@ -538,17 +688,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'This API key is generated only when this request runs.';
 
   @override
-  String get noMockDraft => 'No Quick Mock yet';
+  String get noMockDraft => 'No Mock Servers yet';
 
   @override
-  String get mockDraftDescription =>
-      'Available for this session only. Removed when sendreq closes.';
+  String get mockDraftDescription => 'Create a saved local HTTP Mock Server.';
 
   @override
-  String get newMock => 'New Quick Mock';
+  String get newMock => 'New server';
 
   @override
-  String get createMockFromResponse => 'Use response for Quick Mock';
+  String get createMockFromResponse => 'Create from response';
 
   @override
   String get manualMock => 'Manually configured response';
@@ -557,7 +706,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openCollections => 'Open collections';
 
   @override
-  String get mockDraft => 'Quick Mock';
+  String get mockDraft => 'Mock Server';
 
   @override
   String get fromLatestResponse => 'Based on the latest response';
@@ -569,11 +718,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get responseExample => 'Response example';
 
   @override
-  String get mockResponse => 'Quick Mock response';
+  String get mockResponse => 'Mock response';
 
   @override
-  String get mockLoopbackNote =>
-      'Matches method and path. Query parameters are ignored.';
+  String get mockLoopbackNote => 'HTTP-only. Runs on 127.0.0.1 after Start.';
 
   @override
   String get localRuntime => 'Local runtime';
@@ -585,41 +733,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stopped => 'Stopped';
 
   @override
-  String get stopServer => 'Stop Quick Mock';
+  String get stopServer => 'Stop server';
 
   @override
-  String get startServer => 'Start Quick Mock';
+  String get startServer => 'Start server';
 
   @override
-  String get copyMockAddress => 'Copy Quick Mock address';
+  String get copyMockAddress => 'Copy server address';
 
   @override
-  String get mockAddressCopied => 'Quick Mock address copied.';
-
-  @override
-  String get noDocumentationDraft => 'No documentation draft yet';
-
-  @override
-  String get documentationDraftDescription =>
-      'Send a request, then generate API documentation from its response.';
-
-  @override
-  String get documentationDraft => 'Documentation draft';
-
-  @override
-  String get fromResponseSnapshot => 'Generated from a response snapshot';
-
-  @override
-  String get tryIt => 'Try it';
-
-  @override
-  String get copyApiReference => 'Copy API reference';
-
-  @override
-  String get apiReferenceCopied => 'API reference copied.';
-
-  @override
-  String get apiReference => 'API reference';
+  String get mockAddressCopied => 'Server address copied.';
 
   @override
   String get curlCopied => 'cURL copied.';
@@ -639,14 +762,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get responseTitle => 'Response';
 
   @override
-  String executionSnapshot(String environment) {
-    return 'Execution snapshot · $environment';
-  }
-
-  @override
-  String get unknownEnvironment => 'Unknown environment';
-
-  @override
   String get awaitingCurrentRequest => 'Waiting to send the current request';
 
   @override
@@ -656,17 +771,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pending => 'Pending';
 
   @override
-  String get originalRequestDeleted =>
-      'The original request was deleted and cannot be reopened.';
-
-  @override
   String get body => 'Body';
 
   @override
   String get responseHeaders => 'Response headers';
-
-  @override
-  String get requestSnapshot => 'Request snapshot';
 
   @override
   String get duration => 'Time';
@@ -681,20 +789,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadResponseBody => 'Download response body';
 
   @override
-  String get generateDocumentation => 'Generate documentation';
-
-  @override
-  String get createMock => 'Use response for Quick Mock';
-
-  @override
-  String get replaceQuickMockTitle => 'Replace Quick Mock?';
-
-  @override
-  String get replaceQuickMockMessage =>
-      'The current response configuration will be replaced.';
-
-  @override
-  String get replaceQuickMock => 'Replace';
+  String get createMock => 'Create Mock Server from response';
 
   @override
   String get responseBodyCopied => 'Response body copied.';
@@ -723,6 +818,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rawView => 'Raw';
+
+  @override
+  String get expandJsonNode => 'Expand JSON node';
+
+  @override
+  String get collapseJsonNode => 'Collapse JSON node';
 
   @override
   String responseLineCount(int count) {
@@ -904,9 +1005,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select a Protobuf schema and message type before sending.';
 
   @override
-  String get sendWithShortcut => 'Ctrl+Enter to send';
-
-  @override
   String get messagePayload => 'Message payload';
 
   @override
@@ -915,72 +1013,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get protobufJsonPayload =>
       'JSON for the selected Protobuf message type';
-
-  @override
-  String get executionHistory => 'Execution history';
-
-  @override
-  String get latestRequestSnapshots => 'Latest request snapshots';
-
-  @override
-  String historyExecutionCount(int count) {
-    return '$count executions';
-  }
-
-  @override
-  String get historyTimeline => 'Execution timeline';
-
-  @override
-  String get historyExecutionDetail => 'Execution detail';
-
-  @override
-  String get historyTotal => 'Total';
-
-  @override
-  String get historyAll => 'All';
-
-  @override
-  String get historySuccess => 'Success';
-
-  @override
-  String get historyFailed => 'Failed';
-
-  @override
-  String get historyEmpty => 'No executions yet.';
-
-  @override
-  String get historyNoSearchResults => 'No executions match this search.';
-
-  @override
-  String get clearHistory => 'Clear history';
-
-  @override
-  String get clearHistoryTitle => 'Clear execution history?';
-
-  @override
-  String get clearHistoryMessage =>
-      'This removes all execution records from the current session.';
-
-  @override
-  String get historyCleared => 'Execution history cleared.';
-
-  @override
-  String dashboardForEnvironment(String name) {
-    return 'Last 24 hours, $name workspace';
-  }
-
-  @override
-  String get quickStart => 'Quick start';
-
-  @override
-  String get quickStartDescription =>
-      'Start a draft or import an existing API definition.';
-
-  @override
-  String get requestVolume => 'Request volume';
-
-  @override
-  String get environmentHealth => 'Environment health';
 
   @override
   String get active => 'ACTIVE';
@@ -1009,6 +1041,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add text values only when the endpoint requires them.';
 
   @override
+  String get formUrlEncodedFields => 'URL encoded fields';
+
+  @override
+  String get formUrlEncodedFieldsDescription =>
+      'Add fields to send as application/x-www-form-urlencoded.';
+
+  @override
   String get newCollection => 'New collection';
 
   @override
@@ -1019,6 +1058,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exportOpenApi => 'Export OpenAPI';
+
+  @override
+  String get exportApiDocumentation => 'Export API documentation...';
+
+  @override
+  String get selectDocumentationOutputDirectory =>
+      'Select API documentation directory';
+
+  @override
+  String collectionDocumentationExported(String collectionName) {
+    return 'API documentation for $collectionName exported.';
+  }
+
+  @override
+  String get collectionDocumentationExportFailed =>
+      'Could not export API documentation. Check the selected directory and retry.';
+
+  @override
+  String get collectionHasNoHttpRequests =>
+      'This Collection has no HTTP requests to document.';
 
   @override
   String get importOpenApiJson => 'Import OpenAPI JSON';
@@ -1052,6 +1111,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openExecutionSnapshot => 'Open execution snapshot';
+
+  @override
+  String get openOriginalRequest => 'Open original request';
 
   @override
   String get legacyExecutionNoSnapshot =>
@@ -1106,7 +1168,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionDeleted => 'Collection deleted.';
 
   @override
-  String get folderDeleted => 'Folder deleted.';
+  String get folderDeleted => 'Group deleted.';
 
   @override
   String get requestDeleted => 'Request deleted.';
@@ -1126,9 +1188,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String openApiExportedTo(String path) {
-    return 'OpenAPI exported to $path.';
-  }
+  String get openApiExported => 'OpenAPI exported.';
 
   @override
   String openApiExportFailed(String error) {
@@ -1142,13 +1202,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
-  String get newFolder => 'New folder';
+  String get newFolder => 'New group';
 
   @override
   String get renameCollection => 'Rename collection';
 
   @override
-  String get renameFolder => 'Rename folder';
+  String get renameFolder => 'Rename group';
 
   @override
   String get renameRequest => 'Rename request';
@@ -1157,7 +1217,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteCollection => 'Delete collection';
 
   @override
-  String get deleteFolder => 'Delete folder';
+  String get deleteFolder => 'Delete group';
 
   @override
   String get deleteRequest => 'Delete request';
@@ -1240,11 +1300,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subprotocolsHint => 'graphql-transport-ws, events.v1';
 
   @override
-  String sendRequestWithShortcut(String shortcut) {
-    return 'Send request ($shortcut)';
-  }
-
-  @override
   String get fieldEnabled => 'Enable field';
 
   @override
@@ -1313,6 +1368,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Independent authentication settings';
 
   @override
+  String get httpAuthenticationDelivery =>
+      'HTTP: Authorization header on every request';
+
+  @override
+  String get webSocketAuthenticationDelivery =>
+      'WebSocket: Authorization header during Upgrade';
+
+  @override
+  String get grpcAuthenticationDelivery =>
+      'gRPC: authorization metadata for each call and stream';
+
+  @override
   String get customAuthorizationConfigured =>
       'A custom Authorization header is configured for this request.';
 
@@ -1321,6 +1388,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get edit => 'Edit';
+
+  @override
+  String get preview => 'Preview';
 
   @override
   String get token => 'Token';
@@ -1340,16 +1410,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'The original request was deleted.';
 
   @override
-  String get mockServerStarted => 'Quick Mock started.';
+  String get mockServerStarted => 'Mock Server started.';
 
   @override
-  String get mockServerStopped => 'Quick Mock stopped.';
+  String get mockServerStopped => 'Mock Server stopped.';
 
   @override
-  String get mockServerStartFailed => 'Could not start Quick Mock. Retry.';
+  String get mockServerStartFailed => 'Could not start Mock Server. Retry.';
 
   @override
-  String get mockServerStopFailed => 'Could not stop Quick Mock. Retry.';
+  String get mockServerStopFailed => 'Could not stop Mock Server. Retry.';
 
   @override
   String get files => 'Files';
@@ -1405,6 +1475,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String webSocketMessageSemantics(String direction, String kind, int bytes) {
     return '$direction $kind message, $bytes bytes';
   }
+
+  @override
+  String get expandWebSocketMessage => 'Expand message';
+
+  @override
+  String get collapseWebSocketMessage => 'Collapse message';
+
+  @override
+  String get openWebSocketMessageDetail => 'Open message detail';
 
   @override
   String byteCount(int count) {
@@ -1486,15 +1565,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendRequestBeforeMockDraft =>
-      'Send a request before creating a Quick Mock.';
-
-  @override
-  String get sendRequestBeforeDocumentation =>
-      'Send a request before creating documentation.';
-
-  @override
-  String get createMockDraftBeforeStartingServer =>
-      'Create a Quick Mock before starting it.';
+      'Send an HTTP request before creating a Mock Server.';
 
   @override
   String couldNotSendMessage(String error) {
@@ -1506,6 +1577,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get connectionFailed => 'Connection failed.';
+
+  @override
+  String get reconnectToApplyChanges => 'Reconnect to apply changes';
+
+  @override
+  String get restartToApplyChanges => 'Restart to apply changes';
+
+  @override
+  String get restartGrpcCall => 'Restart';
+
+  @override
+  String get webSocketAuthenticationFailed =>
+      'Authentication failed. Update the active environment token and reconnect.';
+
+  @override
+  String get grpcAuthenticationFailed =>
+      'Authentication failed. Update the active environment token and restart the call.';
+
+  @override
+  String grpcEnvironmentBearerAuthenticationFailed(String environmentName) {
+    return 'Bearer authentication failed. This call uses the Bearer token from $environmentName. Switch to the intended environment or update its Bearer token, then restart the call.';
+  }
+
+  @override
+  String get grpcRequestBearerAuthenticationFailed =>
+      'Bearer authentication failed. This call uses the request Bearer token. Update the request token, then restart the call.';
+
+  @override
+  String get grpcApiKeyAuthenticationFailed =>
+      'API key authentication failed. Update the request API key name and value, then restart the call.';
+
+  @override
+  String get grpcBasicAuthenticationFailed =>
+      'Basic authentication failed. Update the request username and password, then restart the call.';
+
+  @override
+  String get grpcAuthenticationRequired =>
+      'Authentication is required by this gRPC method. Configure the expected request or environment authentication, then restart the call.';
 
   @override
   String couldNotImportProto(String error) {
@@ -1575,4 +1684,259 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get requestCancelled => 'Request cancelled.';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get closeNotifications => 'Close notifications';
+
+  @override
+  String get noActionableNotifications => 'No actionable notifications';
+
+  @override
+  String get noNotifications => 'No notifications';
+
+  @override
+  String get clearNotifications => 'Clear notifications';
+
+  @override
+  String get clearNotificationsTitle => 'Clear notifications?';
+
+  @override
+  String get clearNotificationsRecoveryMessage =>
+      'This removes all notifications and their recovery actions. It does not change the underlying resources or operations.';
+
+  @override
+  String get notificationsClearFailed =>
+      'Could not clear notifications. Retry.';
+
+  @override
+  String get acknowledgeNotification => 'Acknowledge notification';
+
+  @override
+  String get notificationActionFailed => 'Action failed';
+
+  @override
+  String get notificationActionPartiallyCompleted => 'Action partly completed';
+
+  @override
+  String get notificationSessionFailed => 'Session failed';
+
+  @override
+  String get notificationSessionReconnecting => 'Session reconnecting';
+
+  @override
+  String get notificationSessionDisconnected => 'Session disconnected';
+
+  @override
+  String get notificationActionCompleted => 'Action completed';
+
+  @override
+  String get notificationReviewAndAcknowledge =>
+      'Review this event and acknowledge it when it is no longer needed.';
+
+  @override
+  String get notificationSafeRecoveryAvailable =>
+      'A safe recovery action is available.';
+
+  @override
+  String get retryStart => 'Retry start';
+
+  @override
+  String get retryStop => 'Retry stop';
+
+  @override
+  String get retrySave => 'Retry save';
+
+  @override
+  String get retryAction => 'Retry action';
+
+  @override
+  String notificationsNeedAttention(int count) {
+    return '$count notifications need attention';
+  }
+
+  @override
+  String get savedMockServersTitle => 'Saved mock servers';
+
+  @override
+  String mockEndpointCount(int count) {
+    return '$count endpoints';
+  }
+
+  @override
+  String get serverName => 'Server name';
+
+  @override
+  String get copyServerUrl => 'Copy server URL';
+
+  @override
+  String get serverUrlCopied => 'Server URL copied.';
+
+  @override
+  String get startServerBeforeCopyingUrl =>
+      'Start the server before copying its URL.';
+
+  @override
+  String get openServerSource => 'Open server source';
+
+  @override
+  String get mockServerActions => 'Mock server actions';
+
+  @override
+  String get openEndpointSource => 'Open endpoint source';
+
+  @override
+  String get openResponseSource => 'Open response source';
+
+  @override
+  String get mockSourceUnavailable => 'This Mock has no source.';
+
+  @override
+  String get archiveServer => 'Archive server';
+
+  @override
+  String get deleteServer => 'Delete server';
+
+  @override
+  String get archivedServerCannotStart => 'Archived servers cannot be started.';
+
+  @override
+  String get disabledServerCannotStart => 'Disabled servers cannot be started.';
+
+  @override
+  String get archivedServerCannotArchive =>
+      'Archived servers cannot be archived again.';
+
+  @override
+  String get discardMockEdits => 'Discard unsaved Mock Server edits';
+
+  @override
+  String get noMockEditsToDiscard => 'No unsaved Mock Server edits to discard';
+
+  @override
+  String get discardMockChangesTitle => 'Discard changes?';
+
+  @override
+  String get discardMockChangesMessage =>
+      'Discard the unsaved edits to this Mock Server?';
+
+  @override
+  String get archiveMockWithUnsavedEdits =>
+      'Unsaved edits will be discarded. Archive this server?';
+
+  @override
+  String get archiveMockMessage =>
+      'Archive this server and stop its local listener?';
+
+  @override
+  String get deleteMockWithUnsavedEdits =>
+      'Unsaved edits will be discarded. Delete this server?';
+
+  @override
+  String get deleteMockMessage =>
+      'Delete this server and stop its local listener?';
+
+  @override
+  String get endpoints => 'Endpoints';
+
+  @override
+  String get addEndpoint => 'Add endpoint';
+
+  @override
+  String get responseVariants => 'Response variants';
+
+  @override
+  String get addVariant => 'Add variant';
+
+  @override
+  String get defaultVariant => 'Default';
+
+  @override
+  String get conditionalVariant => 'Conditional';
+
+  @override
+  String get delayMs => 'Delay (ms)';
+
+  @override
+  String get removeVariant => 'Remove variant';
+
+  @override
+  String get matchesRequestHeader => 'Matches request header';
+
+  @override
+  String get headerName => 'Header name';
+
+  @override
+  String get headerValue => 'Header value';
+
+  @override
+  String get serverStopped => 'Server is stopped';
+
+  @override
+  String get startSavedServer => 'Start server';
+
+  @override
+  String get stopSavedServer => 'Stop server';
+
+  @override
+  String get sourceRequestUnavailable =>
+      'The source request is no longer available.';
+
+  @override
+  String get sourceResponseUnavailable =>
+      'The source response snapshot is no longer available.';
+
+  @override
+  String get mockServerSaved => 'Mock Server saved.';
+
+  @override
+  String get mockServerCreated => 'Mock Server created.';
+
+  @override
+  String get mockServerCreateFailed => 'Could not create Mock Server. Retry.';
+
+  @override
+  String get mockServersLoadFailed => 'Could not load saved Mock Servers.';
+
+  @override
+  String get protoSourceImportFailed =>
+      'Could not import proto source. Review the file and try again.';
+
+  @override
+  String get descriptorSetImportFailed =>
+      'Could not import descriptor set. Review the file and try again.';
+
+  @override
+  String get grpcReflectionFailed =>
+      'Server reflection failed. Review the endpoint and try again.';
+
+  @override
+  String get mockServerSaveFailed => 'Could not save Mock Server. Retry.';
+
+  @override
+  String get mockServerStartedSaved => 'Mock Server started.';
+
+  @override
+  String get mockServerStartSavedFailed =>
+      'Could not start Mock Server. Retry.';
+
+  @override
+  String get mockServerStoppedSaved => 'Mock Server stopped.';
+
+  @override
+  String get mockServerStopSavedFailed => 'Could not stop Mock Server. Retry.';
+
+  @override
+  String get mockServerArchived => 'Mock Server archived.';
+
+  @override
+  String get mockServerArchiveFailed => 'Could not archive Mock Server. Retry.';
+
+  @override
+  String get mockServerDeleted => 'Mock Server deleted.';
+
+  @override
+  String get mockServerDeleteFailed => 'Could not delete Mock Server. Retry.';
 }

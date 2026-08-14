@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
-import '../../domain/authentication/request_authentication.dart';
-import '../../domain/environments/environment_models.dart';
-import '../../domain/repositories/environment_store.dart';
-import 'in_memory_environment_store.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/environments/environment_models.dart';
+import 'package:sendreq/domain/repositories/environment_store.dart';
+import 'package:sendreq/data/repositories/in_memory_environment_store.dart';
 
 /// 将环境、变量、认证配置持久化到本地 JSON 文件。
 ///
@@ -23,6 +23,8 @@ class FileEnvironmentStore implements EnvironmentStore {
 
   /// 环境配置持久化所在的目录。
   final Directory configurationDirectory;
+
+  Future<void> _writeQueue = Future<void>.value();
 
   /// 加载环境存储：优先读取 JSON 文件，缺失或损坏时回退到示例数据。
   static Future<FileEnvironmentStore> load({
@@ -120,19 +122,31 @@ class FileEnvironmentStore implements EnvironmentStore {
   void updateActiveAuthentication(RequestAuthentication authentication) =>
       _delegate.updateActiveAuthentication(authentication);
 
+  @override
+  void updateEnvironmentAuthentication({
+    required String environmentId,
+    required RequestAuthentication authentication,
+  }) => _delegate.updateEnvironmentAuthentication(
+    environmentId: environmentId,
+    authentication: authentication,
+  );
+
   /// 列出当前环境的变量（含全局变量）。
   @override
-  List<EnvironmentVariableView> listVariables() => _delegate.listVariables();
+  List<EnvironmentVariableView> listVariables({String? environmentId}) =>
+      _delegate.listVariables(environmentId: environmentId);
 
   /// 列出当前认证不再使用的凭据变量名。
   @override
-  List<String> listUnusedAuthenticationVariableNames() =>
-      _delegate.listUnusedAuthenticationVariableNames();
+  List<String> listUnusedAuthenticationVariableNames({String? environmentId}) =>
+      _delegate.listUnusedAuthenticationVariableNames(
+        environmentId: environmentId,
+      );
 
   /// 删除当前认证不再使用的凭据变量。
   @override
-  void removeUnusedAuthenticationVariables() =>
-      _delegate.removeUnusedAuthenticationVariables();
+  void removeUnusedAuthenticationVariables({String? environmentId}) => _delegate
+      .removeUnusedAuthenticationVariables(environmentId: environmentId);
 
   /// 是否存在尚未保存的修改。
   @override
@@ -140,13 +154,18 @@ class FileEnvironmentStore implements EnvironmentStore {
 
   /// 切换当前激活的环境。
   @override
-  void setActiveEnvironment(String environmentId) =>
-      _delegate.setActiveEnvironment(environmentId);
+  Future<void> setActiveEnvironment(String environmentId) async {
+    await _delegate.setActiveEnvironment(environmentId);
+    _writeQueue = _writeQueue.then(
+      (_) => _writeSnapshot(_delegate.savedJsonWithActiveEnvironment()),
+    );
+    await _writeQueue;
+  }
 
   /// 创建环境并设为当前环境。
   @override
-  EnvironmentProfile createEnvironment(String name) =>
-      _delegate.createEnvironment(name);
+  EnvironmentProfile createEnvironment(String name, {bool activate = true}) =>
+      _delegate.createEnvironment(name, activate: activate);
 
   /// 重命名环境并同步更新变量作用域。
   @override
@@ -162,14 +181,22 @@ class FileEnvironmentStore implements EnvironmentStore {
   @override
   void updateVariable({
     required String id,
+    String? environmentId,
     String? key,
     String? value,
     EnvironmentVariableType? type,
-  }) => _delegate.updateVariable(id: id, key: key, value: value, type: type);
+  }) => _delegate.updateVariable(
+    id: id,
+    environmentId: environmentId,
+    key: key,
+    value: value,
+    type: type,
+  );
 
   /// 在当前环境新增一个空变量。
   @override
-  void addVariable() => _delegate.addVariable();
+  void addVariable({String? environmentId}) =>
+      _delegate.addVariable(environmentId: environmentId);
 
   /// 在全局范围新增一个空变量。
   @override
@@ -187,16 +214,24 @@ class FileEnvironmentStore implements EnvironmentStore {
   /// 将当前内存状态编码后原子写入文件，成功后清除未保存标记。
   @override
   Future<void> saveChanges() async {
+    final snapshot = _delegate.toJson();
+    _writeQueue = _writeQueue.then((_) => _writeSnapshot(snapshot));
+    await _writeQueue;
+    _delegate.commitSavedSnapshot(snapshot);
+  }
+
+  @override
+  void discardChanges() => _delegate.discardChanges();
+
+  Future<void> _writeSnapshot(Map<String, Object> snapshot) async {
     final file = _fileFor(configurationDirectory);
     await file.parent.create(recursive: true);
     final temporary = File('${file.path}.tmp');
-    // 先写临时文件再原子重命名，避免写入中断留下损坏的数据。
     await temporary.writeAsString(
-      jsonEncode({'version': 1, ..._delegate.toJson()}),
+      jsonEncode({'version': 1, ...snapshot}),
       flush: true,
     );
     await temporary.rename(file.path);
-    await _delegate.saveChanges();
   }
 
   /// 导出未包装版本号的环境快照，供首次迁移到 Isar 时复用。

@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import '../../domain/api_assets/api_asset_models.dart';
-import '../database/isar_workspace.dart';
-import '../database/isar_workspace_models.dart';
-import '../../domain/repositories/api_asset_repository.dart';
-import 'file_api_asset_repository.dart';
-import 'in_memory_api_asset_repository.dart';
-import 'workspace_asset_snapshot_codec.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/data/database/isar_workspace.dart';
+import 'package:sendreq/data/database/isar_workspace_models.dart';
+import 'package:sendreq/domain/repositories/api_asset_repository.dart';
+import 'package:sendreq/data/repositories/file_api_asset_repository.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
+import 'package:sendreq/data/repositories/workspace_asset_snapshot_codec.dart';
 
 /// 以 Isar 工作区文档持久化 API 资产，同时维持既有同步 repository 接口。
 class IsarApiAssetRepository implements ApiAssetRepository {
@@ -60,6 +60,7 @@ class IsarApiAssetRepository implements ApiAssetRepository {
   void _changed() => _writeQueue = _writeQueue.then((_) => _write());
 
   /// 等待所有排队的写盘操作完成。
+  @override
   Future<void> flush() => _writeQueue;
 
   /// 将当前全部资产编码后写入工作区文档。
@@ -121,10 +122,15 @@ class IsarApiAssetRepository implements ApiAssetRepository {
 
   /// 新建一个请求定义并持久化。
   @override
-  ApiRequestDefinition createRequest({String? collectionId, String? folderId}) {
+  ApiRequestDefinition createRequest({
+    String? collectionId,
+    String? folderId,
+    ApiRequestProtocol protocol = ApiRequestProtocol.http,
+  }) {
     final value = _delegate.createRequest(
       collectionId: collectionId,
       folderId: folderId,
+      protocol: protocol,
     );
     _changed();
     return value;

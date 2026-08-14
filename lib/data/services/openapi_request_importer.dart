@@ -1,34 +1,14 @@
 import 'dart:convert';
 
-import '../../domain/api_assets/api_asset_models.dart';
-import '../../domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/api_assets/openapi_exchange.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/data/services/openapi_request_importer_models.dart';
 
-/// 解析 OpenAPI 文档失败时抛出的异常，携带面向用户的错误信息。
-class OpenApiImportException implements Exception {
-  /// 创建携带错误信息的导入异常。
-  const OpenApiImportException(this.message);
-
-  /// 面向用户的错误说明。
-  final String message;
-}
-
-/// 导入结果：包含生成的集合，以及摊平后的请求定义列表。
-class OpenApiImportResult {
-  /// 创建导入结果。
-  const OpenApiImportResult({required this.collection});
-
-  /// 导入得到的请求集合。
-  final ApiCollection collection;
-
-  /// 遍历所有文件夹，返回集合内全部请求定义。
-  List<ApiRequestDefinition> get requests => [
-    for (final folder in collection.folders)
-      for (final request in folder.requests) request,
-  ];
-}
+export 'package:sendreq/data/services/openapi_request_importer_models.dart';
 
 /// 将 OpenAPI 3.x JSON 文档解析为请求集合与文件夹结构的导入器。
-class OpenApiRequestImporter {
+class OpenApiRequestImporter implements OpenApiImportTransformer {
   /// 创建 OpenAPI 导入器。
   const OpenApiRequestImporter();
 
@@ -37,7 +17,11 @@ class OpenApiRequestImporter {
       parseCollection(source).requests;
 
   /// 解析源码为包含集合与文件夹结构的结果对象。
-  OpenApiImportResult parseCollection(String source) {
+  OpenApiImportResult parseCollection(String source) =>
+      OpenApiImportResult(collection: preview(source).collection);
+
+  @override
+  OpenApiImportPreview preview(String source) {
     final root = _map(jsonDecode(source));
     final version = root['openapi'];
     final paths = root['paths'];
@@ -52,7 +36,7 @@ class OpenApiRequestImporter {
     final collectionId = 'collection-openapi-${_slug(collectionName)}';
     final server = _serverUrl(root['servers']);
     final authenticationSchemes = _authenticationSchemes(root['components']);
-    final folders = <_FolderImportBuilder>[];
+    final folders = <FolderImportBuilder>[];
 
     // 遍历每个路径，为每个受支持的 HTTP 方法生成一个请求定义。
     for (final entry in paths.entries) {
@@ -72,7 +56,7 @@ class OpenApiRequestImporter {
           ...pathParameters,
           ..._parameters(map['parameters'], null),
         ];
-        final bodyTemplate = _body(map['requestBody']);
+        final requestBody = _requestBody(map['requestBody']);
         final headers = _parametersFor(operationParameters, 'header');
         final hasContentType = headers.any(
           (header) => header.key.toLowerCase() == 'content-type',
@@ -92,10 +76,12 @@ class OpenApiRequestImporter {
           queryParams: _parametersFor(operationParameters, 'query'),
           headers: [
             ...headers,
-            if (bodyTemplate.isNotEmpty && !hasContentType)
-              const ApiField(key: 'Content-Type', value: 'application/json'),
+            if (requestBody.contentType != null && !hasContentType)
+              ApiField(key: 'Content-Type', value: requestBody.contentType!),
           ],
-          bodyTemplate: bodyTemplate,
+          bodyTemplate: requestBody.rawBody,
+          formUrlEncodedFields: requestBody.formUrlEncodedFields,
+          multipartFields: requestBody.multipartFields,
           authentication: authentication,
           authenticationSource: RequestAuthenticationSource.request,
           metadata: {
@@ -123,13 +109,92 @@ class OpenApiRequestImporter {
       throw const OpenApiImportException('No supported HTTP operations found.');
     }
 
-    return OpenApiImportResult(
-      collection: ApiCollection(
-        id: collectionId,
-        name: collectionName,
-        folders: apiFolders,
-      ),
+    final collection = ApiCollection(
+      id: collectionId,
+      name: collectionName,
+      folders: apiFolders,
     );
+    return OpenApiImportPreview(
+      id: 'openapi-preview-$collectionId',
+      collection: collection,
+      issues: _issues(root, paths),
+    );
+  }
+
+  List<OpenApiImportIssue> _issues(Map<String, dynamic> root, Object? paths) {
+    final issues = <OpenApiImportIssue>[];
+    if (root['components'] is Map &&
+        _map(root['components'])['schemas'] is Map) {
+      issues.add(
+        const OpenApiImportIssue(
+          kind: OpenApiImportIssueKind.unsupported,
+          path: 'components.schemas',
+          code: 'schemaNotImported',
+        ),
+      );
+    }
+    if (paths is Map) {
+      for (final entry in paths.entries) {
+        if (entry.key is! String || entry.value is! Map) continue;
+        final pathItem = _map(entry.value);
+        for (final method in pathItem.keys.whereType<String>()) {
+          if (const {
+            'parameters',
+            'summary',
+            'description',
+            '\$ref',
+          }.contains(method)) {
+            continue;
+          }
+          if (!const {
+            'get',
+            'post',
+            'put',
+            'patch',
+            'delete',
+          }.contains(method)) {
+            issues.add(
+              OpenApiImportIssue(
+                kind: OpenApiImportIssueKind.unsupported,
+                path: 'paths.${entry.key}.$method',
+                code: 'httpMethodNotImported',
+              ),
+            );
+            continue;
+          }
+          final operation = pathItem[method];
+          if (operation is Map && _map(operation)['responses'] is Map) {
+            issues.add(
+              OpenApiImportIssue(
+                kind: OpenApiImportIssueKind.loss,
+                path: 'paths.${entry.key}.$method.responses',
+                code: 'responsesNotImported',
+              ),
+            );
+          }
+        }
+      }
+    }
+    if (sourceContainsReference(root)) {
+      issues.add(
+        const OpenApiImportIssue(
+          kind: OpenApiImportIssueKind.loss,
+          path: '\$ref',
+          code: 'referenceNotResolved',
+        ),
+      );
+    }
+    return issues;
+  }
+
+  bool sourceContainsReference(Object? value) {
+    if (value is Map) {
+      return value.entries.any(
+        (entry) => entry.key == '\$ref' || sourceContainsReference(entry.value),
+      );
+    }
+    if (value is Iterable) return value.any(sourceContainsReference);
+    return false;
   }
 
   /// 将任意对象安全转换为 `Map<String, dynamic>`。
@@ -163,8 +228,8 @@ class OpenApiRequestImporter {
   }
 
   /// 按路径首段决定所属文件夹；同一首段的路径归入同一个文件夹。
-  _FolderImportBuilder _folderFor(
-    List<_FolderImportBuilder> folders,
+  FolderImportBuilder _folderFor(
+    List<FolderImportBuilder> folders,
     String path,
   ) {
     // 取路径中第一个非空、且非路径参数的段作为文件夹名候选。
@@ -177,7 +242,7 @@ class OpenApiRequestImporter {
     // 已存在同名文件夹则复用，避免重复创建。
     final existing = folders.where((item) => item.id == id);
     if (existing.isNotEmpty) return existing.first;
-    final folder = _FolderImportBuilder(id: id, name: name);
+    final folder = FolderImportBuilder(id: id, name: name);
     folders.add(folder);
     return folder;
   }
@@ -189,7 +254,7 @@ class OpenApiRequestImporter {
       : '{{baseUrl}}';
 
   /// 解析 components.securitySchemes 为认证方案映射。
-  Map<String, _OpenApiAuthenticationScheme> _authenticationSchemes(
+  Map<String, OpenApiAuthenticationScheme> _authenticationSchemes(
     Object? components,
   ) {
     if (components is! Map) return const {};
@@ -198,7 +263,7 @@ class OpenApiRequestImporter {
     return {
       for (final entry in securitySchemes.entries)
         if (entry.key is String && entry.value is Map)
-          entry.key as String: _OpenApiAuthenticationScheme.fromJson(
+          entry.key as String: OpenApiAuthenticationScheme.fromJson(
             _map(entry.value),
           ),
     };
@@ -207,7 +272,7 @@ class OpenApiRequestImporter {
   /// 解析 security 需求并匹配为对应的请求认证配置。
   RequestAuthentication _authenticationFor(
     Object? security,
-    Map<String, _OpenApiAuthenticationScheme> schemes,
+    Map<String, OpenApiAuthenticationScheme> schemes,
   ) {
     if (security is! List) return const RequestAuthentication.none();
     for (final requirement in security.whereType<Map>()) {
@@ -282,19 +347,57 @@ class OpenApiRequestImporter {
     return '';
   }
 
-  /// 从 requestBody 中提取 application/json 的示例，作为请求体模板。
-  String _body(Object? input) {
-    if (input is! Map) return '';
+  /// 从 requestBody 提取受支持媒体类型的原始正文或文本表单字段。
+  ImportedRequestBody _requestBody(Object? input) {
+    if (input is! Map) return const ImportedRequestBody();
     final content = _map(input)['content'];
-    if (content is! Map || content['application/json'] is! Map) return '';
-    final media = _map(content['application/json']);
-    final example = _jsonExample(media);
-    return example == null
-        ? ''
-        : const JsonEncoder.withIndent('  ').convert(example);
+    if (content is! Map) return const ImportedRequestBody();
+    for (final contentType in const [
+      'application/json',
+      'application/x-www-form-urlencoded',
+      'multipart/form-data',
+      'application/xml',
+      'text/plain',
+    ]) {
+      final source = content[contentType];
+      if (source is! Map) continue;
+      final media = _map(source);
+      final example = _jsonExample(media);
+      if (contentType == 'application/x-www-form-urlencoded') {
+        return ImportedRequestBody(
+          contentType: contentType,
+          formUrlEncodedFields: _formFields(example),
+        );
+      }
+      if (contentType == 'multipart/form-data') {
+        return ImportedRequestBody(
+          contentType: contentType,
+          multipartFields: _formFields(example),
+        );
+      }
+      if (example == null) {
+        return ImportedRequestBody(contentType: contentType);
+      }
+      return ImportedRequestBody(
+        contentType: contentType,
+        rawBody: contentType.toLowerCase().contains('json')
+            ? const JsonEncoder.withIndent('  ').convert(example)
+            : '$example',
+      );
+    }
+    return const ImportedRequestBody();
   }
 
-  /// 从 media type 对象中寻找示例：优先级为 example > examples > schema.example。
+  List<ApiField> _formFields(Object? example) {
+    if (example is! Map) return const [];
+    return [
+      for (final entry in example.entries)
+        if (entry.key is String)
+          ApiField(key: entry.key, value: '${entry.value ?? ''}'),
+    ];
+  }
+
+  /// 从媒体类型对象中寻找示例：优先级为 example > examples > schema.example。
   Object? _jsonExample(Map<String, dynamic> media) {
     if (media.containsKey('example')) return media['example'];
     final examples = media['examples'];
@@ -333,66 +436,4 @@ class OpenApiRequestImporter {
         .map((word) => '${word[0].toUpperCase()}${word.substring(1)}')
         .join(' ');
   }
-}
-
-/// 解析后的 OpenAPI 认证方案描述。
-class _OpenApiAuthenticationScheme {
-  /// 创建认证方案描述。
-  const _OpenApiAuthenticationScheme({
-    required this.type,
-    this.apiKeyName = 'X-API-Key',
-    this.apiKeyLocation = ApiKeyLocation.header,
-  });
-
-  /// 从 securitySchemes 条目解析认证方案，无法识别时回退为 none。
-  factory _OpenApiAuthenticationScheme.fromJson(Map<String, dynamic> json) {
-    final type = json['type']?.toString();
-    final httpScheme = json['scheme']?.toString().toLowerCase();
-    if (type == 'http' && httpScheme == 'bearer') {
-      return const _OpenApiAuthenticationScheme(
-        type: RequestAuthenticationType.bearer,
-      );
-    }
-    if (type == 'http' && httpScheme == 'basic') {
-      return const _OpenApiAuthenticationScheme(
-        type: RequestAuthenticationType.basic,
-      );
-    }
-    if (type == 'apiKey') {
-      return _OpenApiAuthenticationScheme(
-        type: RequestAuthenticationType.apiKey,
-        apiKeyName: json['name'] as String? ?? 'X-API-Key',
-        apiKeyLocation: json['in'] == 'query'
-            ? ApiKeyLocation.query
-            : ApiKeyLocation.header,
-      );
-    }
-    return const _OpenApiAuthenticationScheme(
-      type: RequestAuthenticationType.none,
-    );
-  }
-
-  /// 认证类型。
-  final RequestAuthenticationType type;
-
-  /// apiKey 认证使用的参数名。
-  final String apiKeyName;
-
-  /// apiKey 认证的传递位置（header 或 query）。
-  final ApiKeyLocation apiKeyLocation;
-}
-
-/// 导入过程中使用的文件夹构建器，暂存请求直到最终汇总。
-class _FolderImportBuilder {
-  /// 创建文件夹构建器。
-  _FolderImportBuilder({required this.id, required this.name});
-
-  /// 文件夹唯一标识。
-  final String id;
-
-  /// 文件夹显示名称。
-  final String name;
-
-  /// 暂存的请求定义列表。
-  final List<ApiRequestDefinition> requests = [];
 }

@@ -105,6 +105,59 @@ void main() {
     expect(store.resolveTemplate('{{region}}').executionValue, 'cn-north-1');
   });
 
+  test(
+    'switching environments is immediate but does not create edits',
+    () async {
+      final store = InMemoryEnvironmentStore.sample();
+
+      await store.setActiveEnvironment('production');
+
+      expect(store.activeEnvironment.id, 'production');
+      expect(store.hasUnsavedChanges, isFalse);
+    },
+  );
+
+  test(
+    'discard restores saved configuration and keeps a valid selection',
+    () async {
+      final store = InMemoryEnvironmentStore.sample();
+      final stagingBaseUrl = store.listVariables().singleWhere(
+        (variable) => variable.id == 'staging-base-url',
+      );
+      store.updateVariable(id: stagingBaseUrl.id, value: 'https://draft.test');
+      await store.setActiveEnvironment('production');
+
+      store.discardChanges();
+
+      expect(store.activeEnvironment.id, 'production');
+      expect(store.hasUnsavedChanges, isFalse);
+      await store.setActiveEnvironment('staging');
+      expect(
+        store.resolveTemplate('{{baseUrl}}').executionValue,
+        'https://staging.sendreq.io',
+      );
+    },
+  );
+
+  test('committing an older snapshot keeps newer edits dirty', () {
+    final store = InMemoryEnvironmentStore.sample();
+    final variable = store.listVariables().singleWhere(
+      (item) => item.id == 'staging-base-url',
+    );
+    store.updateVariable(id: variable.id, value: 'https://saved.example');
+    final persisted = store.toJson();
+    store.updateVariable(id: variable.id, value: 'https://draft.example');
+
+    store.commitSavedSnapshot(persisted);
+
+    expect(store.hasUnsavedChanges, isTrue);
+    store.discardChanges();
+    expect(
+      store.resolveTemplate('{{baseUrl}}').executionValue,
+      'https://saved.example',
+    );
+  });
+
   test('environment variables are isolated across environment switches', () {
     final store = InMemoryEnvironmentStore.sample();
 

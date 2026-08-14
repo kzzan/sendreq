@@ -2,102 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'grpc_transport.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/grpc/grpc_call_models.dart';
+import 'package:sendreq/domain/grpc/grpc_transport.dart';
+import 'package:sendreq/domain/module_boundaries/boundary_models.dart';
 
-/// 一条 gRPC 调用事件的本地快照。
-class GrpcCallEvent {
-  const GrpcCallEvent({
-    required this.kind,
-    required this.timestamp,
-    required this.byteLength,
-    this.metadata = const {},
-    this.message,
-    this.statusCode,
-    this.statusMessage,
-  });
+export 'package:sendreq/domain/grpc/grpc_call_models.dart';
 
-  /// 事件类型（headers/trailers/status/message/error）。
-  final GrpcTransportEventKind kind;
-
-  /// 事件产生的时间。
-  final DateTime timestamp;
-
-  /// 该事件计入内存预算的字节数。
-  final int byteLength;
-
-  /// 脱敏后的 metadata 键值对。
-  final Map<String, String> metadata;
-
-  /// 二进制消息体；仅在 message 类事件中存在。
-  final Uint8List? message;
-
-  /// gRPC 状态码；仅在 status 类事件中存在。
-  final int? statusCode;
-
-  /// 状态说明或错误消息；已做脱敏。
-  final String? statusMessage;
-}
-
-/// 单个请求的 gRPC 调用状态，事件数量和字节数始终受限。
-class GrpcCallSnapshot {
-  const GrpcCallSnapshot({
-    required this.requestId,
-    required this.state,
-    required this.events,
-    required this.omittedEventCount,
-    required this.retainedByteCount,
-    this.headers = const {},
-    this.trailers = const {},
-    this.errorMessage,
-  });
-
-  /// 所属请求 ID。
-  final String requestId;
-
-  /// 当前调用生命周期状态。
-  final GrpcCallState state;
-
-  /// 有界的事件历史（按数量与字节上限裁剪）。
-  final List<GrpcCallEvent> events;
-
-  /// 因超限被裁剪丢弃的事件个数。
-  final int omittedEventCount;
-
-  /// 当前保留事件占用的总字节数。
-  final int retainedByteCount;
-
-  /// 响应头 metadata。
-  final Map<String, String> headers;
-
-  /// 响应尾 metadata。
-  final Map<String, String> trailers;
-
-  /// 错误消息；成功时为空。
-  final String? errorMessage;
-
-  /// 基于当前快照生成部分更新的副本。
-  GrpcCallSnapshot copyWith({
-    GrpcCallState? state,
-    List<GrpcCallEvent>? events,
-    int? omittedEventCount,
-    int? retainedByteCount,
-    Map<String, String>? headers,
-    Map<String, String>? trailers,
-    String? errorMessage,
-    bool clearError = false,
-  }) => GrpcCallSnapshot(
-    requestId: requestId,
-    state: state ?? this.state,
-    events: events ?? this.events,
-    omittedEventCount: omittedEventCount ?? this.omittedEventCount,
-    retainedByteCount: retainedByteCount ?? this.retainedByteCount,
-    headers: headers ?? this.headers,
-    trailers: trailers ?? this.trailers,
-    errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
-  );
-}
-
-/// 按请求 ID 隔离管理 gRPC 调用、取消和有界本地事件历史。
 class GrpcCallRegistry {
   GrpcCallRegistry(
     this._transport, {
@@ -132,6 +43,10 @@ class GrpcCallRegistry {
         retainedByteCount: 0,
       );
 
+  /// 当前注册表管理的全部调用快照，供工作台汇总活跃会话。
+  Iterable<GrpcCallSnapshot> get calls =>
+      _entries.values.map((entry) => entry.snapshot);
+
   /// 发起调用。新的调用会先取消同一请求此前仍在运行的调用。
   Future<void> start({
     required String requestId,
@@ -141,6 +56,7 @@ class GrpcCallRegistry {
     final entry = _entryFor(requestId);
     entry.generation += 1;
     final generation = entry.generation;
+    entry.redactionPolicy = configuration.redactionPolicy;
     entry.redactedValues = configuration.redactedValues;
     entry.snapshot = GrpcCallSnapshot(
       requestId: requestId,
@@ -148,6 +64,10 @@ class GrpcCallRegistry {
       events: const [],
       omittedEventCount: 0,
       retainedByteCount: 0,
+      endpoint: configuration.redactedEndpoint,
+      rpcShape: configuration.rpcShape,
+      requestStreamOpen: configuration.clientStreaming,
+      sessionContext: configuration.effectiveSessionContext,
     );
     _changed();
     try {
@@ -163,6 +83,15 @@ class GrpcCallRegistry {
         onDone: () => _completeIfRunning(entry, generation),
       );
       entry.snapshot = entry.snapshot.copyWith(state: GrpcCallState.running);
+      if (!configuration.clientStreaming) {
+        _append(
+          entry,
+          _snapshotEvent(
+            GrpcTransportEvent.request(configuration.requestBytes),
+            entry,
+          ),
+        );
+      }
       _changed();
     } on Object catch (error) {
       _fail(entry, generation, '$error');
@@ -186,11 +115,15 @@ class GrpcCallRegistry {
     entry.subscription = null;
     try {
       await entry.call?.cancel();
-      entry.snapshot = entry.snapshot.copyWith(state: GrpcCallState.cancelled);
+      entry.snapshot = entry.snapshot.copyWith(
+        state: GrpcCallState.cancelled,
+        requestStreamOpen: false,
+      );
     } on Object catch (error) {
       entry.snapshot = entry.snapshot.copyWith(
         state: GrpcCallState.error,
         errorMessage: _redact('$error', entry),
+        requestStreamOpen: false,
       );
     } finally {
       entry.call = null;
@@ -200,8 +133,77 @@ class GrpcCallRegistry {
 
   /// 取消并移除某一请求的临时调用状态。
   Future<void> disposeRequest(String requestId) async {
+    final entry = _entries[requestId];
+    if (entry == null) return;
     await cancel(requestId);
+    // 终态调用的 cancel 会保持状态不变，但销毁请求仍必须释放订阅与 transport。
+    entry.generation += 1;
+    await entry.subscription?.cancel();
+    entry.subscription = null;
+    try {
+      await entry.call?.cancel();
+    } on Object {
+      // 销毁边界不再向已移除的请求投影终态错误。
+    }
+    entry.call = null;
     _entries.remove(requestId);
+    _changed();
+  }
+
+  /// 向仍处于打开状态的客户端流写入一条消息，并将其加入本地时间线。
+  Future<void> send({
+    required String requestId,
+    required Uint8List message,
+  }) async {
+    final entry = _entries[requestId];
+    final call = entry?.call;
+    if (entry == null ||
+        call == null ||
+        entry.snapshot.state != GrpcCallState.running ||
+        !entry.snapshot.requestStreamOpen) {
+      throw StateError('The gRPC request stream is not open.');
+    }
+    try {
+      await call.send(message);
+      _append(
+        entry,
+        _snapshotEvent(GrpcTransportEvent.request(message), entry),
+      );
+      _changed();
+    } on Object catch (error) {
+      _fail(entry, entry.generation, '$error');
+    }
+  }
+
+  /// 结束客户端流的发送方向，保留服务端响应流直到服务端完成。
+  Future<void> closeRequestStream(String requestId) async {
+    final entry = _entries[requestId];
+    final call = entry?.call;
+    if (entry == null || call == null || !entry.snapshot.requestStreamOpen) {
+      return;
+    }
+    try {
+      await call.closeRequestStream();
+      entry.snapshot = entry.snapshot.copyWith(requestStreamOpen: false);
+      _changed();
+    } on Object catch (error) {
+      _fail(entry, entry.generation, '$error');
+    }
+  }
+
+  /// 标记仍在运行的指定调用（或全部调用）需要用户以新配置重新启动。
+  void markConfigurationChanged([String? requestId]) {
+    for (final item in _entries.entries) {
+      if (requestId != null && item.key != requestId) continue;
+      final state = item.value.snapshot.state;
+      if (state == GrpcCallState.connecting ||
+          state == GrpcCallState.running ||
+          state == GrpcCallState.cancelling) {
+        item.value.snapshot = item.value.snapshot.copyWith(
+          requiresRestart: true,
+        );
+      }
+    }
     _changed();
   }
 
@@ -253,12 +255,15 @@ class GrpcCallRegistry {
               ? null
               : event.statusMessage,
           clearError: transportEvent.statusCode == 0,
+          requestStreamOpen: false,
         );
       case GrpcTransportEventKind.error:
         entry.snapshot = entry.snapshot.copyWith(
           state: GrpcCallState.error,
           errorMessage: event.statusMessage,
+          requestStreamOpen: false,
         );
+      case GrpcTransportEventKind.request:
       case GrpcTransportEventKind.message:
         break;
     }
@@ -274,9 +279,14 @@ class GrpcCallRegistry {
     final message = event.message == null
         ? null
         : Uint8List.fromList(event.message!);
-    final statusMessage = event.statusMessage == null
+    final statusMessage = event.statusCode == 16
+        ? _authenticationFailureMessage(entry)
+        : event.statusMessage == null
         ? null
-        : _redact(event.statusMessage!, entry);
+        : _actionableAuthenticationFailure(
+            _redact(event.statusMessage!, entry),
+            entry,
+          );
     final byteLength =
         message?.length ??
         utf8
@@ -319,7 +329,10 @@ class GrpcCallRegistry {
   /// 记录错误事件并将调用置为 error 状态。
   void _fail(_CallEntry entry, int generation, String error) {
     if (!_isCurrent(entry, generation)) return;
-    final redacted = _redact(error, entry);
+    final redacted = _actionableAuthenticationFailure(
+      _redact(error, entry),
+      entry,
+    );
     _append(
       entry,
       GrpcCallEvent(
@@ -332,6 +345,7 @@ class GrpcCallRegistry {
     entry.snapshot = entry.snapshot.copyWith(
       state: GrpcCallState.error,
       errorMessage: redacted,
+      requestStreamOpen: false,
     );
     _changed();
   }
@@ -342,17 +356,52 @@ class GrpcCallRegistry {
         entry.snapshot.state != GrpcCallState.running) {
       return;
     }
-    entry.snapshot = entry.snapshot.copyWith(state: GrpcCallState.completed);
+    entry.snapshot = entry.snapshot.copyWith(
+      state: GrpcCallState.completed,
+      requestStreamOpen: false,
+    );
     _changed();
   }
 
   /// 用固定占位符替换值中出现的所有敏感串。
   String _redact(String value, _CallEntry entry) {
+    final policy = entry.redactionPolicy;
+    if (policy != null) {
+      return policy.redact(value).replaceAll('[redacted]', '********');
+    }
     var result = value;
     for (final secret in entry.redactedValues) {
       if (secret.isNotEmpty) result = result.replaceAll(secret, '********');
     }
     return result;
+  }
+
+  String _actionableAuthenticationFailure(String value, _CallEntry entry) {
+    final normalized = value.toLowerCase();
+    if (normalized.contains('unauthenticated') ||
+        normalized.contains('unauthorized') ||
+        normalized.contains('authorization')) {
+      return _authenticationFailureMessage(entry);
+    }
+    return value;
+  }
+
+  String _authenticationFailureMessage(_CallEntry entry) {
+    final context = entry.snapshot.sessionContext;
+    switch (context.authenticationType) {
+      case RequestAuthenticationType.bearer:
+        if (context.authenticationSource ==
+            RequestAuthenticationSource.environment) {
+          return 'Bearer authentication failed. This call uses the Environment Bearer token from ${context.environmentName}. Switch to the intended environment or update its Bearer token, then restart the call.';
+        }
+        return 'Bearer authentication failed. This call uses the request Bearer token. Update the request token, then restart the call.';
+      case RequestAuthenticationType.basic:
+        return 'Basic authentication failed. Update the request username and password, then restart the call.';
+      case RequestAuthenticationType.apiKey:
+        return 'API key authentication failed. Update the request API key name and value, then restart the call.';
+      case RequestAuthenticationType.none:
+        return 'Authentication is required by this gRPC method. Configure the expected request or environment authentication, then restart the call.';
+    }
   }
 
   /// 触发外部变化通知（若已注册）。
@@ -372,7 +421,10 @@ class _CallEntry {
   /// 事件流订阅，取消时需释放。
   StreamSubscription<GrpcTransportEvent>? subscription;
 
-  /// 该调用需脱敏的敏感值集合。
+  /// 由 Environment 持有的策略，用于所有后续会话投影。
+  RedactionPolicy? redactionPolicy;
+
+  /// 为现有调用方与测试提供的遗留兼容输入。
   List<String> redactedValues = const [];
 
   /// 调用代次；每次新发起或取消时自增，用于忽略迟到事件。

@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 
-import '../../domain/authentication/request_authentication.dart';
-import '../../domain/environments/environment_models.dart';
-import '../../domain/repositories/environment_store.dart';
-import '../database/isar_workspace.dart';
-import '../database/isar_workspace_models.dart';
-import 'file_environment_store.dart';
-import 'in_memory_environment_store.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/environments/environment_models.dart';
+import 'package:sendreq/domain/repositories/environment_store.dart';
+import 'package:sendreq/data/database/isar_workspace.dart';
+import 'package:sendreq/data/database/isar_workspace_models.dart';
+import 'package:sendreq/data/repositories/file_environment_store.dart';
+import 'package:sendreq/data/repositories/in_memory_environment_store.dart';
 
 /// 使用 Isar 工作区文档持久化环境、变量与认证配置。
 ///
@@ -66,26 +66,42 @@ class IsarEnvironmentStore implements EnvironmentStore {
       _delegate.updateActiveAuthentication(authentication);
 
   @override
-  List<EnvironmentVariableView> listVariables() => _delegate.listVariables();
+  void updateEnvironmentAuthentication({
+    required String environmentId,
+    required RequestAuthentication authentication,
+  }) => _delegate.updateEnvironmentAuthentication(
+    environmentId: environmentId,
+    authentication: authentication,
+  );
 
   @override
-  List<String> listUnusedAuthenticationVariableNames() =>
-      _delegate.listUnusedAuthenticationVariableNames();
+  List<EnvironmentVariableView> listVariables({String? environmentId}) =>
+      _delegate.listVariables(environmentId: environmentId);
 
   @override
-  void removeUnusedAuthenticationVariables() =>
-      _delegate.removeUnusedAuthenticationVariables();
+  List<String> listUnusedAuthenticationVariableNames({String? environmentId}) =>
+      _delegate.listUnusedAuthenticationVariableNames(
+        environmentId: environmentId,
+      );
+
+  @override
+  void removeUnusedAuthenticationVariables({String? environmentId}) => _delegate
+      .removeUnusedAuthenticationVariables(environmentId: environmentId);
 
   @override
   bool get hasUnsavedChanges => _delegate.hasUnsavedChanges;
 
   @override
-  void setActiveEnvironment(String environmentId) =>
-      _delegate.setActiveEnvironment(environmentId);
+  Future<void> setActiveEnvironment(String environmentId) async {
+    await _delegate.setActiveEnvironment(environmentId);
+    final snapshot = _delegate.savedJsonWithActiveEnvironment();
+    _writeQueue = _writeQueue.then((_) => _write(snapshot));
+    await _writeQueue;
+  }
 
   @override
-  EnvironmentProfile createEnvironment(String name) =>
-      _delegate.createEnvironment(name);
+  EnvironmentProfile createEnvironment(String name, {bool activate = true}) =>
+      _delegate.createEnvironment(name, activate: activate);
 
   @override
   void renameEnvironment(String environmentId, String name) =>
@@ -98,13 +114,21 @@ class IsarEnvironmentStore implements EnvironmentStore {
   @override
   void updateVariable({
     required String id,
+    String? environmentId,
     String? key,
     String? value,
     EnvironmentVariableType? type,
-  }) => _delegate.updateVariable(id: id, key: key, value: value, type: type);
+  }) => _delegate.updateVariable(
+    id: id,
+    environmentId: environmentId,
+    key: key,
+    value: value,
+    type: type,
+  );
 
   @override
-  void addVariable() => _delegate.addVariable();
+  void addVariable({String? environmentId}) =>
+      _delegate.addVariable(environmentId: environmentId);
 
   @override
   void addGlobalVariable() => _delegate.addGlobalVariable();
@@ -119,9 +143,10 @@ class IsarEnvironmentStore implements EnvironmentStore {
   /// 显式保存当前环境快照；写入成功后才清除未保存标记。
   @override
   Future<void> saveChanges() {
+    final snapshot = _delegate.toJson();
     _writeQueue = _writeQueue.then((_) async {
-      await _write();
-      await _delegate.saveChanges();
+      await _write(snapshot);
+      _delegate.commitSavedSnapshot(snapshot);
     });
     return _writeQueue;
   }
@@ -130,10 +155,13 @@ class IsarEnvironmentStore implements EnvironmentStore {
   Future<void> flush() => _writeQueue;
 
   @override
+  void discardChanges() => _delegate.discardChanges();
+
+  @override
   TemplateResolutionResult resolveTemplate(String template) =>
       _delegate.resolveTemplate(template);
 
-  Future<void> _write() async {
+  Future<void> _write([Map<String, Object>? snapshot]) async {
     final existing = await _workspace.instance.workspaceDocuments.getByKey(
       _workspaceKey,
     );
@@ -142,7 +170,7 @@ class IsarEnvironmentStore implements EnvironmentStore {
       ..key = _workspaceKey
       ..schemaVersion = IsarWorkspace.currentDocumentSchemaVersion
       ..updatedAt = DateTime.now().toUtc()
-      ..payloadJson = jsonEncode(_delegate.toJson());
+      ..payloadJson = jsonEncode(snapshot ?? _delegate.toJson());
     await _workspace.instance.writeTxn(
       () => _workspace.instance.workspaceDocuments.put(document),
     );

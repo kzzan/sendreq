@@ -14,7 +14,7 @@ void main() {
         configurationDirectory: directory,
       );
 
-      store.setActiveEnvironment('reurl-production');
+      await store.setActiveEnvironment('reurl-production');
       store.updateVariable(id: 'reurl-token', value: 'test-persisted-token');
       store.updateVariable(id: 'reurl-ip', value: '8.8.8.8');
       store.updateActiveAuthentication(
@@ -56,6 +56,34 @@ void main() {
 
       expect(store.activeEnvironment.id, 'staging');
       expect(store.listEnvironments(), isNotEmpty);
+    },
+  );
+
+  test(
+    'environment selection persists without committing configuration drafts',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sendreq-env-');
+      addTearDown(() => directory.delete(recursive: true));
+      final store = await FileEnvironmentStore.load(
+        configurationDirectory: directory,
+      );
+      store.updateVariable(
+        id: 'staging-base-url',
+        value: 'https://unsaved.test',
+      );
+
+      await store.setActiveEnvironment('production');
+
+      final restored = await FileEnvironmentStore.load(
+        configurationDirectory: directory,
+      );
+      expect(restored.activeEnvironment.id, 'production');
+      await restored.setActiveEnvironment('staging');
+      expect(
+        restored.resolveTemplate('{{baseUrl}}').executionValue,
+        'https://staging.sendreq.io',
+      );
+      expect(store.hasUnsavedChanges, isTrue);
     },
   );
 

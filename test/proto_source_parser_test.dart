@@ -80,8 +80,32 @@ void main() {
 
     expect(descriptor.message('.order.v1.CreateOrderRequest'), isNotNull);
     expect(
-      descriptor.service('.order.v1.OrderService')!.methods.single.name,
-      'CreateOrder',
+      descriptor
+          .service('.order.v1.OrderService')!
+          .methods
+          .map((item) => item.name),
+      ['GetOrder', 'CreateOrder', 'SubmitOrders', 'Chat', 'WatchOrders'],
     );
+    final createOrder = descriptor.message('.order.v1.CreateOrderRequest')!;
+    expect(
+      createOrder.fields.singleWhere((field) => field.name == 'priority').type,
+      14,
+    );
+    expect(
+      createOrder.fields
+          .singleWhere((field) => field.name == 'attributes')
+          .mapEntry,
+      isTrue,
+    );
+    expect(createOrder.oneofs, ['fulfilment']);
+    final chat = descriptor.service('.order.v1.OrderService')!.methods[3];
+    expect(chat.clientStreaming, isTrue);
+    expect(chat.serverStreaming, isTrue);
+    final watchOrders = descriptor
+        .service('.order.v1.OrderService')!
+        .methods
+        .last;
+    expect(watchOrders.clientStreaming, isFalse);
+    expect(watchOrders.serverStreaming, isTrue);
   });
 }

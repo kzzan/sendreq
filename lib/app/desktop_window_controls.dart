@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../features/workspace/application/workspace_window_controls.dart';
+import 'package:sendreq/ui/shell/application/workspace_window_controls.dart';
 
 /// 桌面窗口控制端口的适配器，向 Workspace 隔离具体窗口插件与托盘规则。
 class DesktopWorkspaceWindowControls implements WorkspaceWindowControls {

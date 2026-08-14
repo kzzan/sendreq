@@ -1,6 +1,7 @@
 import 'dart:convert';
 
-import '../authentication/request_authentication.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/grpc/grpc_rpc_shape.dart';
 
 /// 请求使用的网络协议。
 enum ApiRequestProtocol {
@@ -130,8 +131,26 @@ class GrpcRequestConfiguration {
     this.serviceName,
     this.methodName,
     this.useTls = true,
-    this.serverStreaming = false,
-  });
+    GrpcRpcShape? rpcShape,
+    bool clientStreaming = false,
+    bool serverStreaming = false,
+    this.deadlineMs = '',
+    GrpcSchemaSource? schemaSource,
+    bool useReflection = false,
+  }) : rpcShape =
+           rpcShape ??
+           (clientStreaming
+               ? (serverStreaming
+                     ? GrpcRpcShape.bidirectionalStreaming
+                     : GrpcRpcShape.clientStreaming)
+               : (serverStreaming
+                     ? GrpcRpcShape.serverStreaming
+                     : GrpcRpcShape.unary)),
+       schemaSource =
+           schemaSource ??
+           (useReflection
+               ? GrpcSchemaSource.reflection
+               : GrpcSchemaSource.proto);
 
   /// 本地 `.proto` schema 引用；只保存路径与指纹，不保存源文件内容。
   final ProtobufSchemaReference? protoSchema;
@@ -145,8 +164,18 @@ class GrpcRequestConfiguration {
   /// 是否通过 TLS 建立 gRPC HTTP/2 连接。
   final bool useTls;
 
-  /// 选定方法是否声明为服务端流。
-  final bool serverStreaming;
+  /// 选定方法的请求与响应流形。
+  final GrpcRpcShape rpcShape;
+
+  /// 可选的请求 deadline（毫秒）输入。保留原始草稿以便在调用前准确提示格式错误。
+  final String deadlineMs;
+
+  /// schema 来自本地 Proto 或 server reflection。
+  final GrpcSchemaSource schemaSource;
+
+  bool get useReflection => schemaSource == GrpcSchemaSource.reflection;
+  bool get clientStreaming => rpcShape.hasClientStream;
+  bool get serverStreaming => rpcShape.hasServerStream;
 
   /// 复制并部分更新配置。
   GrpcRequestConfiguration copyWith({
@@ -157,13 +186,33 @@ class GrpcRequestConfiguration {
     String? methodName,
     bool clearMethodName = false,
     bool? useTls,
+    GrpcRpcShape? rpcShape,
+    bool? clientStreaming,
     bool? serverStreaming,
+    String? deadlineMs,
+    GrpcSchemaSource? schemaSource,
+    bool? useReflection,
   }) => GrpcRequestConfiguration(
     protoSchema: clearProtoSchema ? null : protoSchema ?? this.protoSchema,
     serviceName: clearServiceName ? null : serviceName ?? this.serviceName,
     methodName: clearMethodName ? null : methodName ?? this.methodName,
     useTls: useTls ?? this.useTls,
-    serverStreaming: serverStreaming ?? this.serverStreaming,
+    rpcShape:
+        rpcShape ??
+        ((clientStreaming != null || serverStreaming != null)
+            ? GrpcRpcShape.fromStreamingFlags(
+                clientStreaming: clientStreaming ?? this.clientStreaming,
+                serverStreaming: serverStreaming ?? this.serverStreaming,
+              )
+            : this.rpcShape),
+    deadlineMs: deadlineMs ?? this.deadlineMs,
+    schemaSource:
+        schemaSource ??
+        (useReflection == null
+            ? this.schemaSource
+            : useReflection
+            ? GrpcSchemaSource.reflection
+            : GrpcSchemaSource.proto),
   );
 
   /// 序列化为持久化 JSON。
@@ -172,7 +221,9 @@ class GrpcRequestConfiguration {
     'serviceName': serviceName,
     'methodName': methodName,
     'useTls': useTls,
-    'serverStreaming': serverStreaming,
+    'rpcShape': rpcShape.storageValue,
+    'deadlineMs': deadlineMs,
+    'schemaSource': schemaSource.storageValue,
   };
 
   /// 从 JSON 还原配置；缺失字段回退到安全默认值。
@@ -187,7 +238,17 @@ class GrpcRequestConfiguration {
         serviceName: json['serviceName'] as String?,
         methodName: json['methodName'] as String?,
         useTls: json['useTls'] as bool? ?? true,
-        serverStreaming: json['serverStreaming'] as bool? ?? false,
+        rpcShape: GrpcRpcShape.fromStorageValue(
+          json['rpcShape'],
+          legacyClientStreaming: json['clientStreaming'] as bool? ?? false,
+          legacyServerStreaming: json['serverStreaming'] as bool? ?? false,
+        ),
+        deadlineMs: json['deadlineMs']?.toString() ?? '',
+        schemaSource: json.containsKey('schemaSource')
+            ? GrpcSchemaSource.fromStorageValue(json['schemaSource'])
+            : (json['useReflection'] as bool? ?? false)
+            ? GrpcSchemaSource.reflection
+            : GrpcSchemaSource.proto,
       );
 }
 
@@ -293,6 +354,7 @@ class ApiRequestDefinition {
     this.protocol = ApiRequestProtocol.http,
     this.webSocket = const WebSocketRequestConfiguration(),
     this.grpc = const GrpcRequestConfiguration(),
+    this.formUrlEncodedFields = const [],
     this.multipartFields = const [],
     this.multipartFiles = const [],
     this.metadata = const {},
@@ -340,6 +402,9 @@ class ApiRequestDefinition {
   /// gRPC 调用配置。
   final GrpcRequestConfiguration grpc;
 
+  /// application/x-www-form-urlencoded 表单字段。
+  final List<ApiField> formUrlEncodedFields;
+
   /// multipart 表单字段。
   final List<ApiField> multipartFields;
 
@@ -365,6 +430,7 @@ class ApiRequestDefinition {
     ApiRequestProtocol? protocol,
     WebSocketRequestConfiguration? webSocket,
     GrpcRequestConfiguration? grpc,
+    List<ApiField>? formUrlEncodedFields,
     List<ApiField>? multipartFields,
     List<ApiFileField>? multipartFiles,
     Map<String, String>? metadata,
@@ -383,6 +449,7 @@ class ApiRequestDefinition {
     protocol: protocol ?? this.protocol,
     webSocket: webSocket ?? this.webSocket,
     grpc: grpc ?? this.grpc,
+    formUrlEncodedFields: formUrlEncodedFields ?? this.formUrlEncodedFields,
     multipartFields: multipartFields ?? this.multipartFields,
     multipartFiles: multipartFiles ?? this.multipartFiles,
     metadata: metadata ?? this.metadata,
@@ -404,6 +471,9 @@ class ApiRequestDefinition {
     'protocol': protocol.storageValue,
     'webSocket': webSocket.toJson(),
     'grpc': grpc.toJson(),
+    'formUrlEncodedFields': formUrlEncodedFields
+        .map((field) => field.toJson())
+        .toList(),
     'multipartFields': multipartFields.map((field) => field.toJson()).toList(),
     'multipartFiles': multipartFiles.map((file) => file.toJson()).toList(),
     'metadata': metadata,
@@ -460,6 +530,12 @@ class ApiRequestDefinition {
           ),
           _ => const GrpcRequestConfiguration(),
         },
+        formUrlEncodedFields:
+            (json['formUrlEncodedFields'] as List<dynamic>? ??
+                    const <dynamic>[])
+                .cast<Map<String, dynamic>>()
+                .map(ApiField.fromJson)
+                .toList(growable: false),
         multipartFields:
             (json['multipartFields'] as List<dynamic>? ?? const <dynamic>[])
                 .cast<Map<String, dynamic>>()

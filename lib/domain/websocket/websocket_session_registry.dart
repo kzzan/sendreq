@@ -3,159 +3,11 @@ import 'dart:collection';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'websocket_transport.dart';
+import 'package:sendreq/domain/module_boundaries/boundary_models.dart';
+import 'package:sendreq/domain/websocket/websocket_session_models.dart';
+import 'package:sendreq/domain/websocket/websocket_transport.dart';
 
-/// 一次 WebSocket 会话中记录到的单个消息事件。
-class WebSocketMessageEvent {
-  /// 构建一条消息事件记录。
-  const WebSocketMessageEvent({
-    required this.direction,
-    required this.kind,
-    required this.timestamp,
-    required this.byteLength,
-    required this.preview,
-    this.textPayload,
-    this.binaryPayload,
-    this.protobufMessageType,
-    this.error,
-  });
-
-  /// 消息方向（入站 / 出站 / 系统）。
-  final WebSocketFrameDirection direction;
-
-  /// 帧类型，决定负载放在哪个字段。
-  final WebSocketFrameKind kind;
-
-  /// 事件发生的时间戳。
-  final DateTime timestamp;
-
-  /// 负载字节长度，用于统计与内存配额控制。
-  final int byteLength;
-
-  /// 供列表展示的简短预览，文本帧截断至 512 字符。
-  final String preview;
-
-  /// 文本消息原文，仅当 [kind] 为文本时非空。
-  final String? textPayload;
-
-  /// 二进制消息原文，仅当 [kind] 为二进制时非空。
-  final Uint8List? binaryPayload;
-
-  /// Protobuf 模式发送时记录的完整消息类型；普通二进制帧为空。
-  final String? protobufMessageType;
-
-  /// 系统事件的错误信息（连接失败等）。
-  final String? error;
-}
-
-/// 单个请求对应的 WebSocket 会话快照，供 UI 只读展示。
-class WebSocketSession {
-  /// 构建会话快照。
-  const WebSocketSession({
-    required this.requestId,
-    required this.state,
-    required this.events,
-    required this.omittedEventCount,
-    required this.retainedByteCount,
-    this.endpoint,
-    this.errorMessage,
-    this.connectedAt,
-    this.sessionStartedAt,
-    this.sessionEndedAt,
-    this.inboundMessageCount = 0,
-    this.outboundMessageCount = 0,
-  });
-
-  /// 所属请求的唯一标识。
-  final String requestId;
-
-  /// 当前连接状态。
-  final WebSocketConnectionState state;
-
-  /// 已保留的消息事件列表（不可变），受配额限制。
-  final List<WebSocketMessageEvent> events;
-
-  /// 因配额被丢弃的事件数量，用于提示用户消息被省略。
-  final int omittedEventCount;
-
-  /// 当前保留事件占用的字节总数。
-  final int retainedByteCount;
-
-  /// 已脱敏的连接端点，仅用于本地会话摘要与界面展示。
-  final String? endpoint;
-
-  /// 最近一次连接错误信息。
-  final String? errorMessage;
-
-  /// 连接成功建立的时间。
-  final DateTime? connectedAt;
-
-  /// 本次连接尝试开始的时间，连接失败时同样保留以计算持续时间。
-  final DateTime? sessionStartedAt;
-
-  /// 本次会话结束的时间；会话尚未终止时为空。
-  final DateTime? sessionEndedAt;
-
-  /// 本次会话已收到的数据帧数量，不受内存事件缓冲裁剪影响。
-  final int inboundMessageCount;
-
-  /// 本次会话已发送的数据帧数量，不受内存事件缓冲裁剪影响。
-  final int outboundMessageCount;
-
-  /// 连接已建立时才能发送消息。
-  bool get canSend => state == WebSocketConnectionState.connected;
-
-  /// 返回应用部分变更后的新会话快照。
-  ///
-  /// [clearError] 为 true 时清空 [errorMessage]，[clearConnectedAt] 为 true 时
-  /// 清空 [connectedAt]。
-  WebSocketSession copyWith({
-    WebSocketConnectionState? state,
-    List<WebSocketMessageEvent>? events,
-    int? omittedEventCount,
-    int? retainedByteCount,
-    String? endpoint,
-    String? errorMessage,
-    bool clearError = false,
-    DateTime? connectedAt,
-    bool clearConnectedAt = false,
-    DateTime? sessionStartedAt,
-    bool clearSessionStartedAt = false,
-    DateTime? sessionEndedAt,
-    bool clearSessionEndedAt = false,
-    int? inboundMessageCount,
-    int? outboundMessageCount,
-  }) => WebSocketSession(
-    requestId: requestId,
-    state: state ?? this.state,
-    events: events ?? this.events,
-    omittedEventCount: omittedEventCount ?? this.omittedEventCount,
-    retainedByteCount: retainedByteCount ?? this.retainedByteCount,
-    endpoint: endpoint ?? this.endpoint,
-    errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
-    connectedAt: clearConnectedAt ? null : connectedAt ?? this.connectedAt,
-    sessionStartedAt: clearSessionStartedAt
-        ? null
-        : sessionStartedAt ?? this.sessionStartedAt,
-    sessionEndedAt: clearSessionEndedAt
-        ? null
-        : sessionEndedAt ?? this.sessionEndedAt,
-    inboundMessageCount: inboundMessageCount ?? this.inboundMessageCount,
-    outboundMessageCount: outboundMessageCount ?? this.outboundMessageCount,
-  );
-}
-
-/// 会话操作不合法时抛出的异常，例如在未连接状态下发送消息。
-class WebSocketSessionException implements Exception {
-  /// 用 [message] 构造异常。
-  const WebSocketSessionException(this.message);
-
-  /// 面向用户的错误说明。
-  final String message;
-
-  @override
-  String toString() => message;
-}
+export 'package:sendreq/domain/websocket/websocket_session_models.dart';
 
 /// 按请求维度管理所有 WebSocket 连接及其消息记录。
 ///
@@ -217,7 +69,8 @@ class WebSocketSessionRegistry {
     required WebSocketConnectionConfiguration configuration,
   }) async {
     final entry = _entryFor(requestId);
-    // 每次重连使用最新的脱敏值，保证后续记录按当前配置掩码。
+    // 每次重连使用最新策略，保证后续记录按当前配置脱敏。
+    entry.redactionPolicy = configuration.redactionPolicy;
     entry.redactedValues = configuration.redactedValues;
     // 端点仅以脱敏形式留在会话中，避免将 URL 查询参数里的 Secret 写入历史。
     final endpoint =
@@ -227,6 +80,8 @@ class WebSocketSessionRegistry {
     if (configuration.url.scheme != 'ws' && configuration.url.scheme != 'wss') {
       entry.session = entry.session.copyWith(
         endpoint: endpoint,
+        sessionContext: configuration.sessionContext,
+        requiresReconnect: false,
         sessionStartedAt: DateTime.now(),
         clearSessionEndedAt: true,
         inboundMessageCount: 0,
@@ -247,6 +102,8 @@ class WebSocketSessionRegistry {
     entry.session = entry.session.copyWith(
       state: WebSocketConnectionState.connecting,
       endpoint: endpoint,
+      sessionContext: configuration.sessionContext,
+      requiresReconnect: false,
       clearError: true,
       sessionStartedAt: DateTime.now(),
       clearSessionEndedAt: true,
@@ -377,6 +234,22 @@ class WebSocketSessionRegistry {
       clearConnectedAt: true,
       sessionEndedAt: DateTime.now(),
     );
+    _changed();
+  }
+
+  /// 标记仍在运行的指定会话（或全部会话）需要用户显式重连。
+  void markConfigurationChanged([String? requestId]) {
+    for (final item in _entries.entries) {
+      if (requestId != null && item.key != requestId) continue;
+      final state = item.value.session.state;
+      if (state == WebSocketConnectionState.connecting ||
+          state == WebSocketConnectionState.connected ||
+          state == WebSocketConnectionState.closing) {
+        item.value.session = item.value.session.copyWith(
+          requiresReconnect: true,
+        );
+      }
+    }
     _changed();
   }
 
@@ -517,7 +390,9 @@ class WebSocketSessionRegistry {
   /// 将指定请求置为错误状态，并追加一条系统错误事件。
   void _setError(String requestId, String message) {
     final entry = _entryFor(requestId);
-    final safeMessage = _boundedSystemMessage(_redact(message, entry));
+    final safeMessage = _boundedSystemMessage(
+      _actionableAuthenticationFailure(_redact(message, entry)),
+    );
     entry.connection = null;
     entry.session = entry.session.copyWith(
       state: WebSocketConnectionState.error,
@@ -561,11 +436,25 @@ class WebSocketSessionRegistry {
 
   /// 将 [value] 中命中的敏感值替换为掩码字符。
   String _redact(String value, _SessionEntry entry) {
+    final policy = entry.redactionPolicy;
+    if (policy != null) {
+      return policy.redact(value).replaceAll('[redacted]', '••••••••');
+    }
     var result = value;
     for (final secret in entry.redactedValues) {
       if (secret.isNotEmpty) result = result.replaceAll(secret, '••••••••');
     }
     return result;
+  }
+
+  String _actionableAuthenticationFailure(String value) {
+    final normalized = value.toLowerCase();
+    if (normalized.contains('401') ||
+        normalized.contains('unauthorized') ||
+        normalized.contains('authorization')) {
+      return 'Authentication failed. Update the active environment token and reconnect.';
+    }
+    return value;
   }
 
   /// 生成列表预览，超过 512 字符时截断并追加省略号。
@@ -599,6 +488,9 @@ class _SessionEntry {
   /// 连接代数，每次发起新连接时递增，用于作废旧连接的异步回调。
   int generation = 0;
 
-  /// 需要脱敏的敏感值列表。
+  /// 由 Environment 持有的策略，用于所有后续会话投影。
+  RedactionPolicy? redactionPolicy;
+
+  /// 为现有调用方与测试提供的遗留兼容输入。
   List<String> redactedValues = const [];
 }

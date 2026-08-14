@@ -1,5 +1,5 @@
-import '../authentication/request_authentication.dart';
-import '../environments/environment_models.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/environments/environment_models.dart';
 
 /// 环境配置文件及其变量的领域存储契约。
 abstract interface class EnvironmentStore {
@@ -9,17 +9,22 @@ abstract interface class EnvironmentStore {
 
   void updateActiveAuthentication(RequestAuthentication authentication);
 
-  List<EnvironmentVariableView> listVariables();
+  void updateEnvironmentAuthentication({
+    required String environmentId,
+    required RequestAuthentication authentication,
+  });
 
-  List<String> listUnusedAuthenticationVariableNames();
+  List<EnvironmentVariableView> listVariables({String? environmentId});
 
-  void removeUnusedAuthenticationVariables();
+  List<String> listUnusedAuthenticationVariableNames({String? environmentId});
+
+  void removeUnusedAuthenticationVariables({String? environmentId});
 
   bool get hasUnsavedChanges;
 
-  void setActiveEnvironment(String environmentId);
+  Future<void> setActiveEnvironment(String environmentId);
 
-  EnvironmentProfile createEnvironment(String name);
+  EnvironmentProfile createEnvironment(String name, {bool activate = true});
 
   void renameEnvironment(String environmentId, String name);
 
@@ -27,12 +32,13 @@ abstract interface class EnvironmentStore {
 
   void updateVariable({
     required String id,
+    String? environmentId,
     String? key,
     String? value,
     EnvironmentVariableType? type,
   });
 
-  void addVariable();
+  void addVariable({String? environmentId});
 
   void addGlobalVariable();
 
@@ -41,6 +47,8 @@ abstract interface class EnvironmentStore {
   void toggleSecretVisibility(String id);
 
   Future<void> saveChanges();
+
+  void discardChanges();
 
   TemplateResolutionResult resolveTemplate(String template);
 }

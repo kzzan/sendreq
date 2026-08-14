@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:isar_community/isar.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'isar_workspace_models.dart';
+import 'package:sendreq/data/database/isar_workspace_models.dart';
 
 /// Isar 工作区数据库的生命周期入口。
 class IsarWorkspace {
@@ -12,7 +12,7 @@ class IsarWorkspace {
   IsarWorkspace._(this.instance);
 
   /// 当前应用层工作区文档格式。
-  static const currentDocumentSchemaVersion = 2;
+  static const currentDocumentSchemaVersion = 3;
 
   /// 底层打开的 Isar 实例，各存储模块通过它读写工作区文档。
   final Isar instance;

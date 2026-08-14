@@ -110,17 +110,29 @@ abstract class AppLocalizations {
   /// **'Local workspace preferences'**
   String get settingsSubtitle;
 
-  /// No description provided for @savePreferences.
-  ///
-  /// In en, this message translates to:
-  /// **'Save preferences'**
-  String get savePreferences;
-
   /// No description provided for @saved.
   ///
   /// In en, this message translates to:
   /// **'Saved'**
   String get saved;
+
+  /// No description provided for @preferencesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved automatically'**
+  String get preferencesSaved;
+
+  /// No description provided for @preferencesSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving...'**
+  String get preferencesSaving;
+
+  /// No description provided for @preferencesSaveFailedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Save failed'**
+  String get preferencesSaveFailedShort;
 
   /// No description provided for @appearance.
   ///
@@ -137,14 +149,38 @@ abstract class AppLocalizations {
   /// No description provided for @font.
   ///
   /// In en, this message translates to:
-  /// **'Font'**
+  /// **'Interface font'**
   String get font;
 
   /// No description provided for @fontDescription.
   ///
   /// In en, this message translates to:
-  /// **'Apply a readable interface font. Code and data stay monospaced.'**
+  /// **'Choose the font used by navigation, labels, and controls.'**
   String get fontDescription;
+
+  /// No description provided for @codeFont.
+  ///
+  /// In en, this message translates to:
+  /// **'Code font'**
+  String get codeFont;
+
+  /// No description provided for @codeFontDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the monospaced font used by requests, JSON, and timelines.'**
+  String get codeFontDescription;
+
+  /// No description provided for @codeFontSize.
+  ///
+  /// In en, this message translates to:
+  /// **'Code size'**
+  String get codeFontSize;
+
+  /// No description provided for @codeFontSizeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Set the base size for code and structured data.'**
+  String get codeFontSizeDescription;
 
   /// No description provided for @light.
   ///
@@ -176,6 +212,60 @@ abstract class AppLocalizations {
   /// **'Choose the language used throughout sendreq.'**
   String get languageDescription;
 
+  /// No description provided for @updates.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get updates;
+
+  /// No description provided for @updateDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Check GitHub Releases for a newer sendreq desktop version.'**
+  String get updateDescription;
+
+  /// No description provided for @checkForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get checkForUpdates;
+
+  /// No description provided for @checkingForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking GitHub Releases...'**
+  String get checkingForUpdates;
+
+  /// No description provided for @updateCheckNotRun.
+  ///
+  /// In en, this message translates to:
+  /// **'No update check has been run.'**
+  String get updateCheckNotRun;
+
+  /// No description provided for @appIsUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is up to date.'**
+  String appIsUpToDate(String version);
+
+  /// No description provided for @appUpdateAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} is available.'**
+  String appUpdateAvailable(String version);
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not check GitHub Releases. Try again.'**
+  String get updateCheckFailed;
+
+  /// No description provided for @updateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateNow;
+
   /// No description provided for @english.
   ///
   /// In en, this message translates to:
@@ -188,82 +278,16 @@ abstract class AppLocalizations {
   /// **'Simplified Chinese'**
   String get simplifiedChinese;
 
-  /// No description provided for @keyboardShortcuts.
-  ///
-  /// In en, this message translates to:
-  /// **'Keyboard shortcuts'**
-  String get keyboardShortcuts;
-
   /// No description provided for @sendRequest.
   ///
   /// In en, this message translates to:
   /// **'Send request'**
   String get sendRequest;
 
-  /// No description provided for @sendShortcutDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose the shortcut used by the global Send action.'**
-  String get sendShortcutDescription;
-
-  /// No description provided for @shortcutConflictWarning.
-  ///
-  /// In en, this message translates to:
-  /// **'Ctrl+Space can conflict with input methods or editor completion.'**
-  String get shortcutConflictWarning;
-
-  /// No description provided for @customShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom shortcut'**
-  String get customShortcut;
-
-  /// No description provided for @noCustomShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Not configured'**
-  String get noCustomShortcut;
-
-  /// No description provided for @recordShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Record shortcut'**
-  String get recordShortcut;
-
-  /// No description provided for @recordShortcutHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Press a key combination. Esc cancels.'**
-  String get recordShortcutHint;
-
-  /// No description provided for @shortcutModifierRequired.
-  ///
-  /// In en, this message translates to:
-  /// **'Use Ctrl, Cmd, Alt, or Shift with another key.'**
-  String get shortcutModifierRequired;
-
-  /// No description provided for @shortcutReserved.
-  ///
-  /// In en, this message translates to:
-  /// **'Ctrl/Cmd+K and Ctrl/Cmd+S are reserved.'**
-  String get shortcutReserved;
-
-  /// No description provided for @shortcutUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'This shortcut cannot be used.'**
-  String get shortcutUnavailable;
-
-  /// No description provided for @shortcutUpdated.
-  ///
-  /// In en, this message translates to:
-  /// **'Send shortcut set to {shortcut}.'**
-  String shortcutUpdated(String shortcut);
-
   /// No description provided for @resetPreferencesDescription.
   ///
   /// In en, this message translates to:
-  /// **'Reset only restores preferences. Requests, environments, and history remain unchanged.'**
+  /// **'Reset only restores preferences. Requests and environments remain unchanged.'**
   String get resetPreferencesDescription;
 
   /// No description provided for @resetDefaults.
@@ -272,119 +296,23 @@ abstract class AppLocalizations {
   /// **'Reset defaults'**
   String get resetDefaults;
 
-  /// No description provided for @preferencesSaved.
-  ///
-  /// In en, this message translates to:
-  /// **'Preferences saved'**
-  String get preferencesSaved;
-
   /// No description provided for @preferencesSaveFailed.
   ///
   /// In en, this message translates to:
   /// **'Could not save preferences. Retry.'**
   String get preferencesSaveFailed;
 
-  /// No description provided for @documentationExport.
-  ///
-  /// In en, this message translates to:
-  /// **'Documentation export'**
-  String get documentationExport;
-
-  /// No description provided for @documentationOutputDirectoryDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose where exported Markdown API references are written.'**
-  String get documentationOutputDirectoryDescription;
-
-  /// No description provided for @noDocumentationOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'No output folder selected'**
-  String get noDocumentationOutputDirectory;
-
-  /// No description provided for @chooseDocumentationOutputFolder.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose documentation output folder'**
-  String get chooseDocumentationOutputFolder;
-
-  /// No description provided for @chooseOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose output folder'**
-  String get chooseOutputDirectory;
-
-  /// No description provided for @changeOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Change output folder'**
-  String get changeOutputDirectory;
-
-  /// No description provided for @defaultOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Default folder'**
-  String get defaultOutputDirectory;
-
-  /// No description provided for @customOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom folder'**
-  String get customOutputDirectory;
-
-  /// No description provided for @restoreDefaultOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Use default output folder'**
-  String get restoreDefaultOutputDirectory;
-
-  /// No description provided for @documentationOutputDirectoryUnavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'The output folder could not be created: {error}'**
-  String documentationOutputDirectoryUnavailable(String error);
-
-  /// No description provided for @documentationOutputDirectoryPrepareFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not create the documentation output folder. Choose another folder and try again.'**
-  String get documentationOutputDirectoryPrepareFailed;
-
-  /// No description provided for @clearOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear output folder'**
-  String get clearOutputDirectory;
-
-  /// No description provided for @configureDocumentationOutputDirectory.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a documentation output folder in Settings before exporting.'**
-  String get configureDocumentationOutputDirectory;
-
-  /// No description provided for @exportMarkdown.
-  ///
-  /// In en, this message translates to:
-  /// **'Export Markdown'**
-  String get exportMarkdown;
-
-  /// No description provided for @markdownExportedTo.
-  ///
-  /// In en, this message translates to:
-  /// **'Markdown documentation exported to {path}.'**
-  String markdownExportedTo(String path);
-
-  /// No description provided for @markdownExportFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Could not export Markdown documentation: {error}'**
-  String markdownExportFailed(String error);
-
   /// No description provided for @environmentChangesSaved.
   ///
   /// In en, this message translates to:
   /// **'Environment changes saved.'**
   String get environmentChangesSaved;
+
+  /// No description provided for @environmentChangesDiscarded.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment changes discarded.'**
+  String get environmentChangesDiscarded;
 
   /// No description provided for @environmentChangesPending.
   ///
@@ -397,6 +325,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save environment changes. Retry.'**
   String get environmentSaveFailed;
+
+  /// No description provided for @environmentCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment created.'**
+  String get environmentCreated;
+
+  /// No description provided for @environmentRenamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment renamed.'**
+  String get environmentRenamed;
+
+  /// No description provided for @environmentDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment deleted.'**
+  String get environmentDeleted;
+
+  /// No description provided for @demoExampleLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo example loaded.'**
+  String get demoExampleLoaded;
 
   /// No description provided for @invalidHttpStatus.
   ///
@@ -437,7 +389,7 @@ abstract class AppLocalizations {
   /// No description provided for @folderRenamed.
   ///
   /// In en, this message translates to:
-  /// **'Folder renamed.'**
+  /// **'Group renamed.'**
   String get folderRenamed;
 
   /// No description provided for @requestChangesSaved.
@@ -506,6 +458,252 @@ abstract class AppLocalizations {
   /// **'Enabled request headers are sent as gRPC metadata.'**
   String get grpcMetadataHint;
 
+  /// No description provided for @grpcMetadata.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata'**
+  String get grpcMetadata;
+
+  /// No description provided for @grpcMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get grpcMessage;
+
+  /// No description provided for @grpcProto.
+  ///
+  /// In en, this message translates to:
+  /// **'Proto'**
+  String get grpcProto;
+
+  /// No description provided for @grpcDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get grpcDeadline;
+
+  /// No description provided for @grpcDeadlineHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional call timeout'**
+  String get grpcDeadlineHint;
+
+  /// No description provided for @millisecondsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'ms'**
+  String get millisecondsShort;
+
+  /// No description provided for @discoverGrpcServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover services'**
+  String get discoverGrpcServices;
+
+  /// No description provided for @discoveringGrpcServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovering...'**
+  String get discoveringGrpcServices;
+
+  /// No description provided for @grpcSchemaFromReflection.
+  ///
+  /// In en, this message translates to:
+  /// **'Services discovered from the active endpoint'**
+  String get grpcSchemaFromReflection;
+
+  /// No description provided for @grpcStartStream.
+  ///
+  /// In en, this message translates to:
+  /// **'Start stream'**
+  String get grpcStartStream;
+
+  /// No description provided for @grpcSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send message'**
+  String get grpcSendMessage;
+
+  /// No description provided for @grpcEndRequestStream.
+  ///
+  /// In en, this message translates to:
+  /// **'End sending'**
+  String get grpcEndRequestStream;
+
+  /// No description provided for @grpcClientStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Client streaming'**
+  String get grpcClientStreaming;
+
+  /// No description provided for @grpcServerStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Server streaming'**
+  String get grpcServerStreaming;
+
+  /// No description provided for @grpcBidirectionalStreaming.
+  ///
+  /// In en, this message translates to:
+  /// **'Bidirectional streaming'**
+  String get grpcBidirectionalStreaming;
+
+  /// No description provided for @grpcUnary.
+  ///
+  /// In en, this message translates to:
+  /// **'Unary'**
+  String get grpcUnary;
+
+  /// No description provided for @grpcRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Request message'**
+  String get grpcRequestMessage;
+
+  /// No description provided for @grpcNoRequestSchema.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a service and RPC method to view request fields.'**
+  String get grpcNoRequestSchema;
+
+  /// No description provided for @grpcNextStreamMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Next stream message'**
+  String get grpcNextStreamMessage;
+
+  /// No description provided for @grpcCallPayload.
+  ///
+  /// In en, this message translates to:
+  /// **'Call payload'**
+  String get grpcCallPayload;
+
+  /// No description provided for @grpcWireInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid payload'**
+  String get grpcWireInvalid;
+
+  /// No description provided for @grpcMessageSchema.
+  ///
+  /// In en, this message translates to:
+  /// **'Message schema'**
+  String get grpcMessageSchema;
+
+  /// No description provided for @grpcFieldRepeated.
+  ///
+  /// In en, this message translates to:
+  /// **'repeated'**
+  String get grpcFieldRepeated;
+
+  /// No description provided for @grpcFieldOneof.
+  ///
+  /// In en, this message translates to:
+  /// **'oneof: {name}'**
+  String grpcFieldOneof(String name);
+
+  /// No description provided for @grpcEventSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent'**
+  String get grpcEventSent;
+
+  /// No description provided for @grpcEventReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get grpcEventReceived;
+
+  /// No description provided for @grpcEventHeaders.
+  ///
+  /// In en, this message translates to:
+  /// **'Headers'**
+  String get grpcEventHeaders;
+
+  /// No description provided for @grpcEventTrailers.
+  ///
+  /// In en, this message translates to:
+  /// **'Trailers'**
+  String get grpcEventTrailers;
+
+  /// No description provided for @grpcEventStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get grpcEventStatus;
+
+  /// No description provided for @grpcEventError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get grpcEventError;
+
+  /// No description provided for @grpcRequestStreamOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Send open'**
+  String get grpcRequestStreamOpen;
+
+  /// No description provided for @grpcRequestStreamClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Send closed'**
+  String get grpcRequestStreamClosed;
+
+  /// No description provided for @grpcStateIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Idle'**
+  String get grpcStateIdle;
+
+  /// No description provided for @grpcStateStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting'**
+  String get grpcStateStarting;
+
+  /// No description provided for @grpcStateRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Running'**
+  String get grpcStateRunning;
+
+  /// No description provided for @grpcStateCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get grpcStateCompleted;
+
+  /// No description provided for @grpcStateCancelling.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelling'**
+  String get grpcStateCancelling;
+
+  /// No description provided for @grpcStateCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get grpcStateCancelled;
+
+  /// No description provided for @grpcStateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get grpcStateFailed;
+
+  /// No description provided for @start.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get start;
+
+  /// No description provided for @stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get stop;
+
   /// No description provided for @changeRequestProtocol.
   ///
   /// In en, this message translates to:
@@ -524,11 +722,53 @@ abstract class AppLocalizations {
   /// **'Workspace'**
   String get workspace;
 
-  /// No description provided for @dashboard.
+  /// No description provided for @requests.
   ///
   /// In en, this message translates to:
-  /// **'Dashboard'**
-  String get dashboard;
+  /// **'Requests'**
+  String get requests;
+
+  /// No description provided for @allRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'All requests'**
+  String get allRequests;
+
+  /// No description provided for @restRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'REST'**
+  String get restRequests;
+
+  /// No description provided for @webSocketRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'WebSocket'**
+  String get webSocketRequests;
+
+  /// No description provided for @grpcRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'gRPC'**
+  String get grpcRequests;
+
+  /// No description provided for @requestWorkingViews.
+  ///
+  /// In en, this message translates to:
+  /// **'Request types'**
+  String get requestWorkingViews;
+
+  /// No description provided for @mock.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock'**
+  String get mock;
+
+  /// No description provided for @manage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get manage;
 
   /// No description provided for @collections.
   ///
@@ -536,17 +776,17 @@ abstract class AppLocalizations {
   /// **'Collections'**
   String get collections;
 
+  /// No description provided for @collectionResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection resources'**
+  String get collectionResources;
+
   /// No description provided for @collectionActions.
   ///
   /// In en, this message translates to:
   /// **'Collection actions'**
   String get collectionActions;
-
-  /// No description provided for @history.
-  ///
-  /// In en, this message translates to:
-  /// **'History'**
-  String get history;
 
   /// No description provided for @environments.
   ///
@@ -554,29 +794,35 @@ abstract class AppLocalizations {
   /// **'Environments'**
   String get environments;
 
-  /// No description provided for @mockServers.
+  /// No description provided for @savedMockServers.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock'**
-  String get mockServers;
+  /// **'Saved Mock Servers'**
+  String get savedMockServers;
 
-  /// No description provided for @documentation.
+  /// No description provided for @saveAsMockServer.
   ///
   /// In en, this message translates to:
-  /// **'Documentation'**
-  String get documentation;
+  /// **'Save as Mock Server'**
+  String get saveAsMockServer;
 
-  /// No description provided for @docs.
+  /// No description provided for @startMockServer.
   ///
   /// In en, this message translates to:
-  /// **'Docs'**
-  String get docs;
+  /// **'Start Server'**
+  String get startMockServer;
 
-  /// No description provided for @searchMetrics.
+  /// No description provided for @stopMockServer.
   ///
   /// In en, this message translates to:
-  /// **'Search metrics...'**
-  String get searchMetrics;
+  /// **'Stop Server'**
+  String get stopMockServer;
+
+  /// No description provided for @mockEndpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} endpoints'**
+  String mockEndpoints(int count);
 
   /// No description provided for @searchRequests.
   ///
@@ -590,42 +836,6 @@ abstract class AppLocalizations {
   /// **'Clear search'**
   String get clearSearch;
 
-  /// No description provided for @searchHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Search history...'**
-  String get searchHistory;
-
-  /// No description provided for @searchVariables.
-  ///
-  /// In en, this message translates to:
-  /// **'Search variables...'**
-  String get searchVariables;
-
-  /// No description provided for @searchMocks.
-  ///
-  /// In en, this message translates to:
-  /// **'Search Quick Mock...'**
-  String get searchMocks;
-
-  /// No description provided for @searchDocumentation.
-  ///
-  /// In en, this message translates to:
-  /// **'Search documentation...'**
-  String get searchDocumentation;
-
-  /// No description provided for @searchSettings.
-  ///
-  /// In en, this message translates to:
-  /// **'Search settings...'**
-  String get searchSettings;
-
-  /// No description provided for @openCommandPalette.
-  ///
-  /// In en, this message translates to:
-  /// **'Open command palette'**
-  String get openCommandPalette;
-
   /// No description provided for @activeEnvironment.
   ///
   /// In en, this message translates to:
@@ -635,32 +845,68 @@ abstract class AppLocalizations {
   /// No description provided for @activeEnvironmentShort.
   ///
   /// In en, this message translates to:
-  /// **'ACTIVE ENV'**
+  /// **'ENV'**
   String get activeEnvironmentShort;
+
+  /// No description provided for @environmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'ENVIRONMENT'**
+  String get environmentLabel;
+
+  /// No description provided for @environmentLabelShort.
+  ///
+  /// In en, this message translates to:
+  /// **'ENV'**
+  String get environmentLabelShort;
+
+  /// No description provided for @manageEnvironments.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage environments...'**
+  String get manageEnvironments;
+
+  /// No description provided for @useForNextCall.
+  ///
+  /// In en, this message translates to:
+  /// **'USE FOR NEXT CALL'**
+  String get useForNextCall;
+
+  /// No description provided for @useForRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Use for requests'**
+  String get useForRequests;
+
+  /// No description provided for @editingEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing: {name}'**
+  String editingEnvironment(String name);
+
+  /// No description provided for @environmentContextTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Environment: {name}. Switch or manage environments.'**
+  String environmentContextTooltip(String name);
+
+  /// No description provided for @currentSessionEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Current session: {name}'**
+  String currentSessionEnvironment(String name);
+
+  /// No description provided for @nextCallEnvironment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next call: {name}'**
+  String nextCallEnvironment(String name);
 
   /// No description provided for @variablesResolveBeforeSend.
   ///
   /// In en, this message translates to:
   /// **'Variables resolve before sending.'**
   String get variablesResolveBeforeSend;
-
-  /// No description provided for @openDocumentation.
-  ///
-  /// In en, this message translates to:
-  /// **'Open documentation'**
-  String get openDocumentation;
-
-  /// No description provided for @saveActiveResource.
-  ///
-  /// In en, this message translates to:
-  /// **'Save active resource'**
-  String get saveActiveResource;
-
-  /// No description provided for @noSaveableChanges.
-  ///
-  /// In en, this message translates to:
-  /// **'No saveable changes'**
-  String get noSaveableChanges;
 
   /// No description provided for @minimizeWindow.
   ///
@@ -710,23 +956,23 @@ abstract class AppLocalizations {
   /// **'Response'**
   String get response;
 
-  /// No description provided for @commandPalette.
-  ///
-  /// In en, this message translates to:
-  /// **'Command palette'**
-  String get commandPalette;
-
-  /// No description provided for @searchCommands.
-  ///
-  /// In en, this message translates to:
-  /// **'Search commands'**
-  String get searchCommands;
-
   /// No description provided for @noMatchingResources.
   ///
   /// In en, this message translates to:
   /// **'No matching resources'**
   String get noMatchingResources;
+
+  /// No description provided for @requestProtocolFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter requests by protocol'**
+  String get requestProtocolFilter;
+
+  /// No description provided for @allRequestProtocols.
+  ///
+  /// In en, this message translates to:
+  /// **'All request protocols'**
+  String get allRequestProtocols;
 
   /// No description provided for @sendActiveRequest.
   ///
@@ -770,6 +1016,36 @@ abstract class AppLocalizations {
   /// **'No changes'**
   String get noChanges;
 
+  /// No description provided for @unsavedEnvironmentChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved environment changes'**
+  String get unsavedEnvironmentChanges;
+
+  /// No description provided for @discardEnvironmentChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard environment changes?'**
+  String get discardEnvironmentChangesTitle;
+
+  /// No description provided for @discardEnvironmentChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Variables, authentication, and environment edits will return to the last saved version.'**
+  String get discardEnvironmentChangesMessage;
+
+  /// No description provided for @closeEnvironmentManagerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply environment changes?'**
+  String get closeEnvironmentManagerTitle;
+
+  /// No description provided for @closeEnvironmentManagerMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply these changes before returning to Requests, or discard them to restore the last saved environment.'**
+  String get closeEnvironmentManagerMessage;
+
   /// No description provided for @currentEnvironment.
   ///
   /// In en, this message translates to:
@@ -781,6 +1057,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select current environment'**
   String get selectCurrentEnvironment;
+
+  /// No description provided for @selectEnvironmentToEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an environment to edit'**
+  String get selectEnvironmentToEdit;
 
   /// No description provided for @newEnvironment.
   ///
@@ -881,7 +1163,7 @@ abstract class AppLocalizations {
   /// No description provided for @environmentAuditNote.
   ///
   /// In en, this message translates to:
-  /// **'Saving changes creates a lightweight revision record. Full audit diffs will be available in a later release.'**
+  /// **'Changes take effect after Apply.'**
   String get environmentAuditNote;
 
   /// No description provided for @variableValue.
@@ -911,7 +1193,7 @@ abstract class AppLocalizations {
   /// No description provided for @requiredTokenVariable.
   ///
   /// In en, this message translates to:
-  /// **'Token is required for every environment'**
+  /// **'Managed by Bearer authentication for this environment'**
   String get requiredTokenVariable;
 
   /// No description provided for @requiredEnvironmentBaseUrl.
@@ -965,7 +1247,7 @@ abstract class AppLocalizations {
   /// No description provided for @requestSpecificAuthentication.
   ///
   /// In en, this message translates to:
-  /// **'Request-specific'**
+  /// **'Request only (does not inherit environment)'**
   String get requestSpecificAuthentication;
 
   /// No description provided for @configureEnvironmentAuthentication.
@@ -1073,25 +1355,25 @@ abstract class AppLocalizations {
   /// No description provided for @noMockDraft.
   ///
   /// In en, this message translates to:
-  /// **'No Quick Mock yet'**
+  /// **'No Mock Servers yet'**
   String get noMockDraft;
 
   /// No description provided for @mockDraftDescription.
   ///
   /// In en, this message translates to:
-  /// **'Available for this session only. Removed when sendreq closes.'**
+  /// **'Create a saved local HTTP Mock Server.'**
   String get mockDraftDescription;
 
   /// No description provided for @newMock.
   ///
   /// In en, this message translates to:
-  /// **'New Quick Mock'**
+  /// **'New server'**
   String get newMock;
 
   /// No description provided for @createMockFromResponse.
   ///
   /// In en, this message translates to:
-  /// **'Use response for Quick Mock'**
+  /// **'Create from response'**
   String get createMockFromResponse;
 
   /// No description provided for @manualMock.
@@ -1109,7 +1391,7 @@ abstract class AppLocalizations {
   /// No description provided for @mockDraft.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock'**
+  /// **'Mock Server'**
   String get mockDraft;
 
   /// No description provided for @fromLatestResponse.
@@ -1133,13 +1415,13 @@ abstract class AppLocalizations {
   /// No description provided for @mockResponse.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock response'**
+  /// **'Mock response'**
   String get mockResponse;
 
   /// No description provided for @mockLoopbackNote.
   ///
   /// In en, this message translates to:
-  /// **'Matches method and path. Query parameters are ignored.'**
+  /// **'HTTP-only. Runs on 127.0.0.1 after Start.'**
   String get mockLoopbackNote;
 
   /// No description provided for @localRuntime.
@@ -1163,74 +1445,26 @@ abstract class AppLocalizations {
   /// No description provided for @stopServer.
   ///
   /// In en, this message translates to:
-  /// **'Stop Quick Mock'**
+  /// **'Stop server'**
   String get stopServer;
 
   /// No description provided for @startServer.
   ///
   /// In en, this message translates to:
-  /// **'Start Quick Mock'**
+  /// **'Start server'**
   String get startServer;
 
   /// No description provided for @copyMockAddress.
   ///
   /// In en, this message translates to:
-  /// **'Copy Quick Mock address'**
+  /// **'Copy server address'**
   String get copyMockAddress;
 
   /// No description provided for @mockAddressCopied.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock address copied.'**
+  /// **'Server address copied.'**
   String get mockAddressCopied;
-
-  /// No description provided for @noDocumentationDraft.
-  ///
-  /// In en, this message translates to:
-  /// **'No documentation draft yet'**
-  String get noDocumentationDraft;
-
-  /// No description provided for @documentationDraftDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Send a request, then generate API documentation from its response.'**
-  String get documentationDraftDescription;
-
-  /// No description provided for @documentationDraft.
-  ///
-  /// In en, this message translates to:
-  /// **'Documentation draft'**
-  String get documentationDraft;
-
-  /// No description provided for @fromResponseSnapshot.
-  ///
-  /// In en, this message translates to:
-  /// **'Generated from a response snapshot'**
-  String get fromResponseSnapshot;
-
-  /// No description provided for @tryIt.
-  ///
-  /// In en, this message translates to:
-  /// **'Try it'**
-  String get tryIt;
-
-  /// No description provided for @copyApiReference.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy API reference'**
-  String get copyApiReference;
-
-  /// No description provided for @apiReferenceCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'API reference copied.'**
-  String get apiReferenceCopied;
-
-  /// No description provided for @apiReference.
-  ///
-  /// In en, this message translates to:
-  /// **'API reference'**
-  String get apiReference;
 
   /// No description provided for @curlCopied.
   ///
@@ -1262,18 +1496,6 @@ abstract class AppLocalizations {
   /// **'Response'**
   String get responseTitle;
 
-  /// No description provided for @executionSnapshot.
-  ///
-  /// In en, this message translates to:
-  /// **'Execution snapshot · {environment}'**
-  String executionSnapshot(String environment);
-
-  /// No description provided for @unknownEnvironment.
-  ///
-  /// In en, this message translates to:
-  /// **'Unknown environment'**
-  String get unknownEnvironment;
-
   /// No description provided for @awaitingCurrentRequest.
   ///
   /// In en, this message translates to:
@@ -1292,12 +1514,6 @@ abstract class AppLocalizations {
   /// **'Pending'**
   String get pending;
 
-  /// No description provided for @originalRequestDeleted.
-  ///
-  /// In en, this message translates to:
-  /// **'The original request was deleted and cannot be reopened.'**
-  String get originalRequestDeleted;
-
   /// No description provided for @body.
   ///
   /// In en, this message translates to:
@@ -1309,12 +1525,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Response headers'**
   String get responseHeaders;
-
-  /// No description provided for @requestSnapshot.
-  ///
-  /// In en, this message translates to:
-  /// **'Request snapshot'**
-  String get requestSnapshot;
 
   /// No description provided for @duration.
   ///
@@ -1340,35 +1550,11 @@ abstract class AppLocalizations {
   /// **'Download response body'**
   String get downloadResponseBody;
 
-  /// No description provided for @generateDocumentation.
-  ///
-  /// In en, this message translates to:
-  /// **'Generate documentation'**
-  String get generateDocumentation;
-
   /// No description provided for @createMock.
   ///
   /// In en, this message translates to:
-  /// **'Use response for Quick Mock'**
+  /// **'Create Mock Server from response'**
   String get createMock;
-
-  /// No description provided for @replaceQuickMockTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Replace Quick Mock?'**
-  String get replaceQuickMockTitle;
-
-  /// No description provided for @replaceQuickMockMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'The current response configuration will be replaced.'**
-  String get replaceQuickMockMessage;
-
-  /// No description provided for @replaceQuickMock.
-  ///
-  /// In en, this message translates to:
-  /// **'Replace'**
-  String get replaceQuickMock;
 
   /// No description provided for @responseBodyCopied.
   ///
@@ -1417,6 +1603,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Raw'**
   String get rawView;
+
+  /// No description provided for @expandJsonNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand JSON node'**
+  String get expandJsonNode;
+
+  /// No description provided for @collapseJsonNode.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse JSON node'**
+  String get collapseJsonNode;
 
   /// No description provided for @responseLineCount.
   ///
@@ -1730,12 +1928,6 @@ abstract class AppLocalizations {
   /// **'Select a Protobuf schema and message type before sending.'**
   String get selectProtobufBeforeSending;
 
-  /// No description provided for @sendWithShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Ctrl+Enter to send'**
-  String get sendWithShortcut;
-
   /// No description provided for @messagePayload.
   ///
   /// In en, this message translates to:
@@ -1753,126 +1945,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'JSON for the selected Protobuf message type'**
   String get protobufJsonPayload;
-
-  /// No description provided for @executionHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Execution history'**
-  String get executionHistory;
-
-  /// No description provided for @latestRequestSnapshots.
-  ///
-  /// In en, this message translates to:
-  /// **'Latest request snapshots'**
-  String get latestRequestSnapshots;
-
-  /// No description provided for @historyExecutionCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} executions'**
-  String historyExecutionCount(int count);
-
-  /// No description provided for @historyTimeline.
-  ///
-  /// In en, this message translates to:
-  /// **'Execution timeline'**
-  String get historyTimeline;
-
-  /// No description provided for @historyExecutionDetail.
-  ///
-  /// In en, this message translates to:
-  /// **'Execution detail'**
-  String get historyExecutionDetail;
-
-  /// No description provided for @historyTotal.
-  ///
-  /// In en, this message translates to:
-  /// **'Total'**
-  String get historyTotal;
-
-  /// No description provided for @historyAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get historyAll;
-
-  /// No description provided for @historySuccess.
-  ///
-  /// In en, this message translates to:
-  /// **'Success'**
-  String get historySuccess;
-
-  /// No description provided for @historyFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed'**
-  String get historyFailed;
-
-  /// No description provided for @historyEmpty.
-  ///
-  /// In en, this message translates to:
-  /// **'No executions yet.'**
-  String get historyEmpty;
-
-  /// No description provided for @historyNoSearchResults.
-  ///
-  /// In en, this message translates to:
-  /// **'No executions match this search.'**
-  String get historyNoSearchResults;
-
-  /// No description provided for @clearHistory.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear history'**
-  String get clearHistory;
-
-  /// No description provided for @clearHistoryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear execution history?'**
-  String get clearHistoryTitle;
-
-  /// No description provided for @clearHistoryMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This removes all execution records from the current session.'**
-  String get clearHistoryMessage;
-
-  /// No description provided for @historyCleared.
-  ///
-  /// In en, this message translates to:
-  /// **'Execution history cleared.'**
-  String get historyCleared;
-
-  /// No description provided for @dashboardForEnvironment.
-  ///
-  /// In en, this message translates to:
-  /// **'Last 24 hours, {name} workspace'**
-  String dashboardForEnvironment(String name);
-
-  /// No description provided for @quickStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Quick start'**
-  String get quickStart;
-
-  /// No description provided for @quickStartDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Start a draft or import an existing API definition.'**
-  String get quickStartDescription;
-
-  /// No description provided for @requestVolume.
-  ///
-  /// In en, this message translates to:
-  /// **'Request volume'**
-  String get requestVolume;
-
-  /// No description provided for @environmentHealth.
-  ///
-  /// In en, this message translates to:
-  /// **'Environment health'**
-  String get environmentHealth;
 
   /// No description provided for @active.
   ///
@@ -1916,6 +1988,18 @@ abstract class AppLocalizations {
   /// **'Add text values only when the endpoint requires them.'**
   String get multipartFieldsDescription;
 
+  /// No description provided for @formUrlEncodedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'URL encoded fields'**
+  String get formUrlEncodedFields;
+
+  /// No description provided for @formUrlEncodedFieldsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Add fields to send as application/x-www-form-urlencoded.'**
+  String get formUrlEncodedFieldsDescription;
+
   /// No description provided for @newCollection.
   ///
   /// In en, this message translates to:
@@ -1939,6 +2023,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export OpenAPI'**
   String get exportOpenApi;
+
+  /// No description provided for @exportApiDocumentation.
+  ///
+  /// In en, this message translates to:
+  /// **'Export API documentation...'**
+  String get exportApiDocumentation;
+
+  /// No description provided for @selectDocumentationOutputDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select API documentation directory'**
+  String get selectDocumentationOutputDirectory;
+
+  /// No description provided for @collectionDocumentationExported.
+  ///
+  /// In en, this message translates to:
+  /// **'API documentation for {collectionName} exported.'**
+  String collectionDocumentationExported(String collectionName);
+
+  /// No description provided for @collectionDocumentationExportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not export API documentation. Check the selected directory and retry.'**
+  String get collectionDocumentationExportFailed;
+
+  /// No description provided for @collectionHasNoHttpRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'This Collection has no HTTP requests to document.'**
+  String get collectionHasNoHttpRequests;
 
   /// No description provided for @importOpenApiJson.
   ///
@@ -2000,6 +2114,12 @@ abstract class AppLocalizations {
   /// **'Open execution snapshot'**
   String get openExecutionSnapshot;
 
+  /// No description provided for @openOriginalRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Open original request'**
+  String get openOriginalRequest;
+
   /// No description provided for @legacyExecutionNoSnapshot.
   ///
   /// In en, this message translates to:
@@ -2045,7 +2165,7 @@ abstract class AppLocalizations {
   /// No description provided for @folderDeleted.
   ///
   /// In en, this message translates to:
-  /// **'Folder deleted.'**
+  /// **'Group deleted.'**
   String get folderDeleted;
 
   /// No description provided for @requestDeleted.
@@ -2078,11 +2198,11 @@ abstract class AppLocalizations {
   /// **'{count} OpenAPI requests imported into {name}.'**
   String openApiRequestsImported(int count, String name);
 
-  /// No description provided for @openApiExportedTo.
+  /// No description provided for @openApiExported.
   ///
   /// In en, this message translates to:
-  /// **'OpenAPI exported to {path}.'**
-  String openApiExportedTo(String path);
+  /// **'OpenAPI exported.'**
+  String get openApiExported;
 
   /// No description provided for @openApiExportFailed.
   ///
@@ -2105,7 +2225,7 @@ abstract class AppLocalizations {
   /// No description provided for @newFolder.
   ///
   /// In en, this message translates to:
-  /// **'New folder'**
+  /// **'New group'**
   String get newFolder;
 
   /// No description provided for @renameCollection.
@@ -2117,7 +2237,7 @@ abstract class AppLocalizations {
   /// No description provided for @renameFolder.
   ///
   /// In en, this message translates to:
-  /// **'Rename folder'**
+  /// **'Rename group'**
   String get renameFolder;
 
   /// No description provided for @renameRequest.
@@ -2135,7 +2255,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteFolder.
   ///
   /// In en, this message translates to:
-  /// **'Delete folder'**
+  /// **'Delete group'**
   String get deleteFolder;
 
   /// No description provided for @deleteRequest.
@@ -2294,12 +2414,6 @@ abstract class AppLocalizations {
   /// **'graphql-transport-ws, events.v1'**
   String get subprotocolsHint;
 
-  /// No description provided for @sendRequestWithShortcut.
-  ///
-  /// In en, this message translates to:
-  /// **'Send request ({shortcut})'**
-  String sendRequestWithShortcut(String shortcut);
-
   /// No description provided for @fieldEnabled.
   ///
   /// In en, this message translates to:
@@ -2426,6 +2540,24 @@ abstract class AppLocalizations {
   /// **'Independent authentication settings'**
   String get authorizationAppliedAsHeader;
 
+  /// No description provided for @httpAuthenticationDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'HTTP: Authorization header on every request'**
+  String get httpAuthenticationDelivery;
+
+  /// No description provided for @webSocketAuthenticationDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'WebSocket: Authorization header during Upgrade'**
+  String get webSocketAuthenticationDelivery;
+
+  /// No description provided for @grpcAuthenticationDelivery.
+  ///
+  /// In en, this message translates to:
+  /// **'gRPC: authorization metadata for each call and stream'**
+  String get grpcAuthenticationDelivery;
+
   /// No description provided for @customAuthorizationConfigured.
   ///
   /// In en, this message translates to:
@@ -2443,6 +2575,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get edit;
+
+  /// No description provided for @preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get preview;
 
   /// No description provided for @token.
   ///
@@ -2477,25 +2615,25 @@ abstract class AppLocalizations {
   /// No description provided for @mockServerStarted.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock started.'**
+  /// **'Mock Server started.'**
   String get mockServerStarted;
 
   /// No description provided for @mockServerStopped.
   ///
   /// In en, this message translates to:
-  /// **'Quick Mock stopped.'**
+  /// **'Mock Server stopped.'**
   String get mockServerStopped;
 
   /// No description provided for @mockServerStartFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not start Quick Mock. Retry.'**
+  /// **'Could not start Mock Server. Retry.'**
   String get mockServerStartFailed;
 
   /// No description provided for @mockServerStopFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not stop Quick Mock. Retry.'**
+  /// **'Could not stop Mock Server. Retry.'**
   String get mockServerStopFailed;
 
   /// No description provided for @files.
@@ -2599,6 +2737,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{direction} {kind} message, {bytes} bytes'**
   String webSocketMessageSemantics(String direction, String kind, int bytes);
+
+  /// No description provided for @expandWebSocketMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand message'**
+  String get expandWebSocketMessage;
+
+  /// No description provided for @collapseWebSocketMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse message'**
+  String get collapseWebSocketMessage;
+
+  /// No description provided for @openWebSocketMessageDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Open message detail'**
+  String get openWebSocketMessageDetail;
 
   /// No description provided for @byteCount.
   ///
@@ -2729,20 +2885,8 @@ abstract class AppLocalizations {
   /// No description provided for @sendRequestBeforeMockDraft.
   ///
   /// In en, this message translates to:
-  /// **'Send a request before creating a Quick Mock.'**
+  /// **'Send an HTTP request before creating a Mock Server.'**
   String get sendRequestBeforeMockDraft;
-
-  /// No description provided for @sendRequestBeforeDocumentation.
-  ///
-  /// In en, this message translates to:
-  /// **'Send a request before creating documentation.'**
-  String get sendRequestBeforeDocumentation;
-
-  /// No description provided for @createMockDraftBeforeStartingServer.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a Quick Mock before starting it.'**
-  String get createMockDraftBeforeStartingServer;
 
   /// No description provided for @couldNotSendMessage.
   ///
@@ -2761,6 +2905,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Connection failed.'**
   String get connectionFailed;
+
+  /// No description provided for @reconnectToApplyChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Reconnect to apply changes'**
+  String get reconnectToApplyChanges;
+
+  /// No description provided for @restartToApplyChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart to apply changes'**
+  String get restartToApplyChanges;
+
+  /// No description provided for @restartGrpcCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart'**
+  String get restartGrpcCall;
+
+  /// No description provided for @webSocketAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Update the active environment token and reconnect.'**
+  String get webSocketAuthenticationFailed;
+
+  /// No description provided for @grpcAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed. Update the active environment token and restart the call.'**
+  String get grpcAuthenticationFailed;
+
+  /// No description provided for @grpcEnvironmentBearerAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bearer authentication failed. This call uses the Bearer token from {environmentName}. Switch to the intended environment or update its Bearer token, then restart the call.'**
+  String grpcEnvironmentBearerAuthenticationFailed(String environmentName);
+
+  /// No description provided for @grpcRequestBearerAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Bearer authentication failed. This call uses the request Bearer token. Update the request token, then restart the call.'**
+  String get grpcRequestBearerAuthenticationFailed;
+
+  /// No description provided for @grpcApiKeyAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'API key authentication failed. Update the request API key name and value, then restart the call.'**
+  String get grpcApiKeyAuthenticationFailed;
+
+  /// No description provided for @grpcBasicAuthenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic authentication failed. Update the request username and password, then restart the call.'**
+  String get grpcBasicAuthenticationFailed;
+
+  /// No description provided for @grpcAuthenticationRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication is required by this gRPC method. Configure the expected request or environment authentication, then restart the call.'**
+  String get grpcAuthenticationRequired;
 
   /// No description provided for @couldNotImportProto.
   ///
@@ -2863,6 +3067,474 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Request cancelled.'**
   String get requestCancelled;
+
+  /// No description provided for @notifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notifications;
+
+  /// No description provided for @closeNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Close notifications'**
+  String get closeNotifications;
+
+  /// No description provided for @noActionableNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'No actionable notifications'**
+  String get noActionableNotifications;
+
+  /// No description provided for @noNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'No notifications'**
+  String get noNotifications;
+
+  /// No description provided for @clearNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear notifications'**
+  String get clearNotifications;
+
+  /// No description provided for @clearNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear notifications?'**
+  String get clearNotificationsTitle;
+
+  /// No description provided for @clearNotificationsRecoveryMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This removes all notifications and their recovery actions. It does not change the underlying resources or operations.'**
+  String get clearNotificationsRecoveryMessage;
+
+  /// No description provided for @notificationsClearFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear notifications. Retry.'**
+  String get notificationsClearFailed;
+
+  /// No description provided for @acknowledgeNotification.
+  ///
+  /// In en, this message translates to:
+  /// **'Acknowledge notification'**
+  String get acknowledgeNotification;
+
+  /// No description provided for @notificationActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action failed'**
+  String get notificationActionFailed;
+
+  /// No description provided for @notificationActionPartiallyCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Action partly completed'**
+  String get notificationActionPartiallyCompleted;
+
+  /// No description provided for @notificationSessionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Session failed'**
+  String get notificationSessionFailed;
+
+  /// No description provided for @notificationSessionReconnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Session reconnecting'**
+  String get notificationSessionReconnecting;
+
+  /// No description provided for @notificationSessionDisconnected.
+  ///
+  /// In en, this message translates to:
+  /// **'Session disconnected'**
+  String get notificationSessionDisconnected;
+
+  /// No description provided for @notificationActionCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Action completed'**
+  String get notificationActionCompleted;
+
+  /// No description provided for @notificationReviewAndAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Review this event and acknowledge it when it is no longer needed.'**
+  String get notificationReviewAndAcknowledge;
+
+  /// No description provided for @notificationSafeRecoveryAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'A safe recovery action is available.'**
+  String get notificationSafeRecoveryAvailable;
+
+  /// No description provided for @retryStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry start'**
+  String get retryStart;
+
+  /// No description provided for @retryStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry stop'**
+  String get retryStop;
+
+  /// No description provided for @retrySave.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry save'**
+  String get retrySave;
+
+  /// No description provided for @retryAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry action'**
+  String get retryAction;
+
+  /// No description provided for @notificationsNeedAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} notifications need attention'**
+  String notificationsNeedAttention(int count);
+
+  /// No description provided for @savedMockServersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved mock servers'**
+  String get savedMockServersTitle;
+
+  /// No description provided for @mockEndpointCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} endpoints'**
+  String mockEndpointCount(int count);
+
+  /// No description provided for @serverName.
+  ///
+  /// In en, this message translates to:
+  /// **'Server name'**
+  String get serverName;
+
+  /// No description provided for @copyServerUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy server URL'**
+  String get copyServerUrl;
+
+  /// No description provided for @serverUrlCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Server URL copied.'**
+  String get serverUrlCopied;
+
+  /// No description provided for @startServerBeforeCopyingUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Start the server before copying its URL.'**
+  String get startServerBeforeCopyingUrl;
+
+  /// No description provided for @openServerSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Open server source'**
+  String get openServerSource;
+
+  /// No description provided for @mockServerActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock server actions'**
+  String get mockServerActions;
+
+  /// No description provided for @openEndpointSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Open endpoint source'**
+  String get openEndpointSource;
+
+  /// No description provided for @openResponseSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Open response source'**
+  String get openResponseSource;
+
+  /// No description provided for @mockSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This Mock has no source.'**
+  String get mockSourceUnavailable;
+
+  /// No description provided for @archiveServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive server'**
+  String get archiveServer;
+
+  /// No description provided for @deleteServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete server'**
+  String get deleteServer;
+
+  /// No description provided for @archivedServerCannotStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived servers cannot be started.'**
+  String get archivedServerCannotStart;
+
+  /// No description provided for @disabledServerCannotStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled servers cannot be started.'**
+  String get disabledServerCannotStart;
+
+  /// No description provided for @archivedServerCannotArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived servers cannot be archived again.'**
+  String get archivedServerCannotArchive;
+
+  /// No description provided for @discardMockEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard unsaved Mock Server edits'**
+  String get discardMockEdits;
+
+  /// No description provided for @noMockEditsToDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'No unsaved Mock Server edits to discard'**
+  String get noMockEditsToDiscard;
+
+  /// No description provided for @discardMockChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get discardMockChangesTitle;
+
+  /// No description provided for @discardMockChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard the unsaved edits to this Mock Server?'**
+  String get discardMockChangesMessage;
+
+  /// No description provided for @archiveMockWithUnsavedEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved edits will be discarded. Archive this server?'**
+  String get archiveMockWithUnsavedEdits;
+
+  /// No description provided for @archiveMockMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive this server and stop its local listener?'**
+  String get archiveMockMessage;
+
+  /// No description provided for @deleteMockWithUnsavedEdits.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved edits will be discarded. Delete this server?'**
+  String get deleteMockWithUnsavedEdits;
+
+  /// No description provided for @deleteMockMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this server and stop its local listener?'**
+  String get deleteMockMessage;
+
+  /// No description provided for @endpoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Endpoints'**
+  String get endpoints;
+
+  /// No description provided for @addEndpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add endpoint'**
+  String get addEndpoint;
+
+  /// No description provided for @responseVariants.
+  ///
+  /// In en, this message translates to:
+  /// **'Response variants'**
+  String get responseVariants;
+
+  /// No description provided for @addVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Add variant'**
+  String get addVariant;
+
+  /// No description provided for @defaultVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get defaultVariant;
+
+  /// No description provided for @conditionalVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Conditional'**
+  String get conditionalVariant;
+
+  /// No description provided for @delayMs.
+  ///
+  /// In en, this message translates to:
+  /// **'Delay (ms)'**
+  String get delayMs;
+
+  /// No description provided for @removeVariant.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove variant'**
+  String get removeVariant;
+
+  /// No description provided for @matchesRequestHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches request header'**
+  String get matchesRequestHeader;
+
+  /// No description provided for @headerName.
+  ///
+  /// In en, this message translates to:
+  /// **'Header name'**
+  String get headerName;
+
+  /// No description provided for @headerValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Header value'**
+  String get headerValue;
+
+  /// No description provided for @serverStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Server is stopped'**
+  String get serverStopped;
+
+  /// No description provided for @startSavedServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Start server'**
+  String get startSavedServer;
+
+  /// No description provided for @stopSavedServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop server'**
+  String get stopSavedServer;
+
+  /// No description provided for @sourceRequestUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The source request is no longer available.'**
+  String get sourceRequestUnavailable;
+
+  /// No description provided for @sourceResponseUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The source response snapshot is no longer available.'**
+  String get sourceResponseUnavailable;
+
+  /// No description provided for @mockServerSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server saved.'**
+  String get mockServerSaved;
+
+  /// No description provided for @mockServerCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server created.'**
+  String get mockServerCreated;
+
+  /// No description provided for @mockServerCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not create Mock Server. Retry.'**
+  String get mockServerCreateFailed;
+
+  /// No description provided for @mockServersLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load saved Mock Servers.'**
+  String get mockServersLoadFailed;
+
+  /// No description provided for @protoSourceImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import proto source. Review the file and try again.'**
+  String get protoSourceImportFailed;
+
+  /// No description provided for @descriptorSetImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import descriptor set. Review the file and try again.'**
+  String get descriptorSetImportFailed;
+
+  /// No description provided for @grpcReflectionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Server reflection failed. Review the endpoint and try again.'**
+  String get grpcReflectionFailed;
+
+  /// No description provided for @mockServerSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save Mock Server. Retry.'**
+  String get mockServerSaveFailed;
+
+  /// No description provided for @mockServerStartedSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server started.'**
+  String get mockServerStartedSaved;
+
+  /// No description provided for @mockServerStartSavedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not start Mock Server. Retry.'**
+  String get mockServerStartSavedFailed;
+
+  /// No description provided for @mockServerStoppedSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server stopped.'**
+  String get mockServerStoppedSaved;
+
+  /// No description provided for @mockServerStopSavedFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not stop Mock Server. Retry.'**
+  String get mockServerStopSavedFailed;
+
+  /// No description provided for @mockServerArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server archived.'**
+  String get mockServerArchived;
+
+  /// No description provided for @mockServerArchiveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not archive Mock Server. Retry.'**
+  String get mockServerArchiveFailed;
+
+  /// No description provided for @mockServerDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Mock Server deleted.'**
+  String get mockServerDeleted;
+
+  /// No description provided for @mockServerDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not delete Mock Server. Retry.'**
+  String get mockServerDeleteFailed;
 }
 
 class _AppLocalizationsDelegate

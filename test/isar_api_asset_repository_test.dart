@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sendreq/data/database/isar_workspace.dart';
 import 'package:sendreq/data/repositories/isar_api_asset_repository.dart';
 import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/ui/shell/view_models/workspace_view_model.dart';
 
 import 'support/isar_test_core.dart';
+import 'support/workspace_view_model_test_factory.dart';
 
 void main() {
   setUpAll(initializeIsarForTest);
@@ -74,5 +76,30 @@ void main() {
     expect(grpc.grpc.protoSchema?.fingerprint, 'known-good');
     expect(grpc.grpc.serviceName, '.sendreq.Health');
     expect(grpc.grpc.methodName, 'Check');
+  });
+
+  test('durable request save survives closing and reopening Isar', () async {
+    final directory = await Directory.systemTemp.createTemp('sendreq-save-');
+    addTearDown(() => directory.delete(recursive: true));
+    final firstWorkspace = await IsarWorkspace.open(directory: directory);
+    final repository = await IsarApiAssetRepository.load(
+      workspace: firstWorkspace,
+    );
+    final viewModel = workspaceViewModel(assetRepository: repository);
+    viewModel.updateActiveDraftUrl('https://durable.example.test/users');
+
+    await viewModel.saveActiveRequestDurably();
+    viewModel.dispose();
+    await firstWorkspace.close();
+
+    final secondWorkspace = await IsarWorkspace.open(directory: directory);
+    addTearDown(secondWorkspace.close);
+    final restored = await IsarApiAssetRepository.load(
+      workspace: secondWorkspace,
+    );
+    expect(
+      restored.getRequest('demo-rest-list-users').urlTemplate,
+      'https://durable.example.test/users',
+    );
   });
 }

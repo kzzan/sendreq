@@ -4,23 +4,230 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:sendreq/app/sendreq_app.dart';
-import 'package:sendreq/core/theme/app_colors.dart';
+import 'package:sendreq/ui/core/theme/code_text_theme.dart';
+import 'package:sendreq/ui/core/theme/chakra_tokens.dart';
+import 'package:sendreq/ui/core/theme/form_control_metrics.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
 import 'package:sendreq/data/repositories/in_memory_workspace_preference_store.dart';
+import 'package:sendreq/data/demo/demo_example_catalog.dart';
 import 'package:sendreq/data/services/demo_request_execution_runtime.dart';
-import 'package:sendreq/domain/models/workspace_models.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
 import 'package:sendreq/domain/preferences/workspace_preferences.dart';
 import 'package:sendreq/domain/request_runtime/request_execution_runtime.dart';
-import 'package:sendreq/features/workspace/view_models/workspace_view_model.dart';
-import 'package:sendreq/features/request_editor/widgets/request_editor_panel.dart';
-import 'package:sendreq/core/widgets/dense_controls.dart';
+import 'package:sendreq/domain/repositories/workspace_preference_store.dart';
+import 'package:sendreq/ui/shell/view_models/workspace_view_model.dart';
+import 'package:sendreq/ui/features/requests/editor/widgets/request_editor_panel.dart';
+import 'package:sendreq/ui/features/settings/widgets/settings_controls.dart';
+import 'package:sendreq/ui/core/widgets/dense_controls.dart';
 import 'package:sendreq/l10n/generated/app_localizations.dart';
 
 import 'support/workspace_view_model_test_factory.dart';
+import 'support/app_update_fakes.dart';
 
-// 工作台核心交互的组件测试：覆盖本地化/外观偏好、请求编辑、集合管理、
-// 历史记录、Mock 与文档草稿、Dashboard 以及全局快捷键等端到端流程。
+// 工作台核心交互的组件测试：覆盖偏好、Requests、Environment 上下文与 Mock。
 void main() {
+  testWidgets('three-tool shell stays focused and stable at target widths', (
+    tester,
+  ) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final width in [375.0, 768.0, 1024.0, 1440.0]) {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(const SendreqApp());
+      await tester.pumpAndSettle();
+
+      final requests = find.byKey(const ValueKey('request-working-view-all'));
+      final mock = find.byKey(const ValueKey('tool-navigation-mock'));
+      final settings = find.byKey(const ValueKey('tool-navigation-settings'));
+      expect(requests, findsOneWidget);
+      expect(mock, findsOneWidget);
+      expect(settings, findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getSize(find.byKey(const Key('tool-navigation-rail'))).width,
+        width < 900 ? 56 : 184,
+      );
+      final buttonWidth = tester.getRect(requests).width;
+      expect(tester.getRect(settings).bottom, greaterThan(740));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(FocusManager.instance.primaryFocus, isNotNull);
+
+      await tester.tap(mock);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('mock-create-manual-action')),
+        findsOneWidget,
+      );
+      expect(tester.getRect(mock).width, buttonWidth);
+
+      await tester.tap(settings);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('settings-single-surface')), findsOneWidget);
+      expect(tester.getRect(settings).width, buttonWidth);
+    }
+  });
+
+  testWidgets('Environment manage uses a local drawer on wide Requests', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const SendreqApp());
+    await tester.pumpAndSettle();
+
+    await _openEnvironmentManager(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('environment-manage-drawer')), findsOneWidget);
+    expect(find.byKey(const Key('environment-manage-stage')), findsNothing);
+    expect(
+      find.byKey(const Key('collection-desktop-workspace')),
+      findsOneWidget,
+    );
+
+    await tester.tapAt(const Offset(300, 320));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('environment-manage-drawer')), findsNothing);
+  });
+
+  testWidgets('Environment outside click and Escape share dirty close guard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const SendreqApp());
+    await tester.pumpAndSettle();
+
+    await _openEnvironmentManager(tester);
+    await tester.tap(find.byKey(const ValueKey('new-environment-button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('environment-name-input')),
+      'Close guard',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Create environment'));
+    await tester.pumpAndSettle();
+
+    await tester.tapAt(const Offset(300, 320));
+    await tester.pumpAndSettle();
+    expect(find.text('Apply environment changes?'), findsOneWidget);
+    expect(find.byKey(const Key('environment-manage-drawer')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('environment-close-keep-editing')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('environment-manage-drawer')), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(find.text('Apply environment changes?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('environment-close-discard')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('environment-manage-drawer')), findsNothing);
+  });
+
+  testWidgets('protocol working view keeps the active request stable', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const SendreqApp());
+    await tester.pumpAndSettle();
+
+    final urlField = tester.widget<TextFormField>(
+      find.byKey(const Key('request-url-text-field')),
+    );
+    final activeUrl = urlField.controller!.text;
+    final collection = find.byKey(const Key('collection-panel'));
+    expect(find.byKey(const Key('collection-protocol-filter')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('request-working-view-grpc')));
+    await tester.pumpAndSettle();
+    final filteredPills = tester.widgetList<RequestKindPill>(
+      find.descendant(of: collection, matching: find.byType(RequestKindPill)),
+    );
+    expect(filteredPills, isNotEmpty);
+    expect(
+      filteredPills.every((pill) => pill.protocol == ApiRequestProtocol.grpc),
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.byKey(const Key('request-url-text-field')),
+          )
+          .controller!
+          .text,
+      activeUrl,
+    );
+
+    await tester.tap(find.byKey(const ValueKey('request-working-view-all')));
+    await tester.pumpAndSettle();
+    final allProtocols = tester
+        .widgetList<RequestKindPill>(
+          find.descendant(
+            of: collection,
+            matching: find.byType(RequestKindPill),
+          ),
+        )
+        .map((pill) => pill.protocol)
+        .toSet();
+    expect(allProtocols, containsAll(ApiRequestProtocol.values));
+  });
+
+  testWidgets('Environment manage uses a stage on narrow Requests', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const SendreqApp());
+    await tester.pumpAndSettle();
+
+    await _openEnvironmentManager(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('environment-manage-stage')), findsOneWidget);
+    expect(find.byKey(const Key('environment-manage-drawer')), findsNothing);
+  });
+
+  testWidgets('Environment stays available without an active request', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          assetRepository: InMemoryApiAssetRepository(collections: const []),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final contextControl = find.byKey(const Key('environment-context-control'));
+    expect(contextControl, findsOneWidget);
+    expect(find.text('ENV'), findsOneWidget);
+    expect(find.text('No requests yet'), findsOneWidget);
+
+    await _openEnvironmentManager(tester);
+
+    expect(find.byKey(const Key('environment-manage-stage')), findsOneWidget);
+    expect(find.text('Environment variables'), findsOneWidget);
+  });
+
   // 场景：偏好设置为简体中文时，请求配置面板与集合上下文菜单应显示中文提示。
   // 通过删除确认弹窗中的计数文案，验证本地化词条在真实交互中生效。
   testWidgets(
@@ -37,7 +244,6 @@ void main() {
             preferenceStore: InMemoryWorkspacePreferenceStore(
               const WorkspacePreferences(
                 appearance: AppearancePreference.dark,
-                sendShortcut: SendShortcutPreference.controlEnter,
                 locale: LocalePreference.simplifiedChinese,
               ),
             ),
@@ -56,45 +262,45 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('删除'));
       await tester.pumpAndSettle();
-      expect(find.text('删除 Sendreq Demo Example 及其 7 个请求？'), findsOneWidget);
+      expect(find.text('删除 Sendreq Demo Example 及其 15 个请求？'), findsOneWidget);
     },
   );
 
-  // 场景：启动时读取已保存的偏好，应以浅色外观和 Ctrl+Space 快捷键初始化工作区。
-  // 打开设置页断言分段控件的选中状态，确认偏好被正确加载。
-  testWidgets(
-    'saved preferences initialize the workspace appearance and shortcut',
-    (tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(
-        SendreqApp(
-          executionRuntime: DemoRequestExecutionRuntime(),
-          workspaceDependencies: workspaceTestDependencies(
-            preferenceStore: InMemoryWorkspacePreferenceStore(
-              const WorkspacePreferences(
-                appearance: AppearancePreference.light,
-                sendShortcut: SendShortcutPreference.controlSpace,
-              ),
-            ),
+  // 场景：启动时读取已保存的偏好，应以浅色外观初始化工作区。
+  testWidgets('saved preferences initialize the workspace appearance', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(
+        executionRuntime: DemoRequestExecutionRuntime(),
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: InMemoryWorkspacePreferenceStore(
+            const WorkspacePreferences(appearance: AppearancePreference.light),
           ),
         ),
-      );
-      await tester.pumpAndSettle();
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      expect(AppColors.background, const Color(0xFFF9F9FF));
-      await tester.tap(find.byTooltip('Settings'));
-      await tester.pumpAndSettle();
-      final tabs = tester.widgetList<SegmentedTabs>(find.byType(SegmentedTabs));
-      expect(tabs.first.active, 'Light');
-      expect(
-        tabs.singleWhere((tab) => tab.tabs.contains('Ctrl+Space')).active,
-        'Ctrl+Space',
-      );
-    },
-  );
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<ChakraSemanticTokens>(),
+      same(ChakraSemanticTokens.light),
+    );
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    final appearance = tester.widget<SettingsOptionGroup<AppearancePreference>>(
+      find.byWidgetPredicate(
+        (widget) => widget is SettingsOptionGroup<AppearancePreference>,
+      ),
+    );
+    expect(appearance.selected, AppearancePreference.light);
+  });
 
   // 场景：在设置页切换外观主题后，全局配色与 Scaffold 亮度应同步更新。
   testWidgets('settings changes the active appearance palette', (tester) async {
@@ -107,20 +313,231 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(AppColors.background, const Color(0xFF0B1326));
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<ChakraSemanticTokens>(),
+      same(ChakraSemanticTokens.dark),
+    );
     await tester.tap(find.byTooltip('Settings'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Light'));
     await tester.pumpAndSettle();
 
-    expect(AppColors.background, const Color(0xFFF9F9FF));
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<ChakraSemanticTokens>(),
+      same(ChakraSemanticTokens.light),
+    );
     expect(
       Theme.of(tester.element(find.byType(Scaffold))).brightness,
       Brightness.light,
     );
-    expect(find.text('Save preferences'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Save preferences'));
+    expect(find.text('Save preferences'), findsNothing);
+  });
+
+  testWidgets('settings exposes fixed auto-save failure and retry status', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1024, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = _FailOncePreferenceStore();
+
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: store,
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    final status = find.byKey(const Key('settings-persistence-status'));
+    expect(find.text('Saved automatically'), findsOneWidget);
+    final savedSize = tester.getSize(status);
+
+    await tester.tap(find.byKey(const Key('settings-appearance-light')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Save failed'), findsOneWidget);
+    expect(find.byKey(const Key('settings-retry-save')), findsOneWidget);
+    expect(tester.getSize(status), savedSize);
+
+    await tester.tap(find.byKey(const Key('settings-retry-save')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Saved automatically'), findsOneWidget);
+    expect(find.byKey(const Key('settings-retry-save')), findsNothing);
+    expect(tester.getSize(status), savedSize);
+    expect(store.saved.single.appearance, AppearancePreference.light);
+  });
+
+  testWidgets('every setting updates the app and survives a restart', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = InMemoryWorkspacePreferenceStore();
+
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings-interface-font-noto')));
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).textTheme.bodyMedium?.fontFamily,
+      'Noto Sans',
+    );
+
+    await tester.tap(find.byKey(const Key('settings-code-font-system')));
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<CodeTextTheme>()?.fontFamily,
+      'monospace',
+    );
+
+    final slider = find.byKey(const Key('code-font-size-slider'));
+    await tester.drag(slider, const Offset(500, 0));
+    await tester.pumpAndSettle();
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<CodeTextTheme>()?.fontSize,
+      18,
+    );
+
+    await tester.tap(find.byKey(const Key('settings-locale-zh')));
+    await tester.pumpAndSettle();
+    expect(find.text('本地工作区偏好'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: store,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final theme = Theme.of(tester.element(find.byType(Scaffold)));
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'Noto Sans');
+    expect(theme.extension<CodeTextTheme>()?.fontFamily, 'monospace');
+    expect(theme.extension<CodeTextTheme>()?.fontSize, 18);
+    expect(find.byTooltip('设置'), findsOneWidget);
+  });
+
+  testWidgets('reset restores every domain preference default', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: InMemoryWorkspacePreferenceStore(
+            const WorkspacePreferences(
+              appearance: AppearancePreference.light,
+              locale: LocalePreference.english,
+              font: WorkspaceFontPreference.notoSans,
+              codeFont: CodeFontPreference.system,
+              codeFontSize: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Reset defaults'));
+    await tester.pumpAndSettle();
+
+    final theme = Theme.of(tester.element(find.byType(Scaffold)));
+    expect(theme.brightness, Brightness.dark);
+    expect(theme.textTheme.bodyMedium?.fontFamily, isNot('Noto Sans'));
+    final interfaceFont = tester
+        .widget<SettingsOptionGroup<WorkspaceFontPreference>>(
+          find.byWidgetPredicate(
+            (widget) => widget is SettingsOptionGroup<WorkspaceFontPreference>,
+          ),
+        );
+    expect(interfaceFont.selected, WorkspacePreferences.defaults.font);
+    expect(
+      theme.extension<CodeTextTheme>()?.fontFamily,
+      WorkspacePreferences.defaults.codeFont.family,
+    );
+    expect(
+      theme.extension<CodeTextTheme>()?.fontSize,
+      WorkspacePreferences.defaults.codeFontSize,
+    );
+  });
+
+  // 场景：跟随系统时，Material 主题和 Chakra 语义令牌必须在系统亮度变化后同步。
+  testWidgets('system appearance synchronizes the semantic palette', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: InMemoryWorkspacePreferenceStore(
+            const WorkspacePreferences(appearance: AppearancePreference.system),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<ChakraSemanticTokens>(),
+      same(ChakraSemanticTokens.light),
+    );
+    expect(
+      Theme.of(tester.element(find.byType(Scaffold))).brightness,
+      Brightness.light,
+    );
+
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pumpAndSettle();
+
+    expect(
+      Theme.of(
+        tester.element(find.byType(Scaffold)),
+      ).extension<ChakraSemanticTokens>(),
+      same(ChakraSemanticTokens.dark),
+    );
+    expect(
+      Theme.of(tester.element(find.byType(Scaffold))).brightness,
+      Brightness.dark,
+    );
   });
 
   // 场景：在设置页切换语言时，所有设置项标签应整体在中英文之间切换。
@@ -145,13 +562,11 @@ void main() {
       expect(find.text('本地工作区偏好'), findsOneWidget);
       expect(find.text('外观'), findsOneWidget);
       expect(find.text('语言'), findsOneWidget);
-      expect(find.text('键盘快捷键'), findsOneWidget);
       expect(find.text('简体中文'), findsOneWidget);
 
       await tester.tap(find.text('English'));
       await tester.pumpAndSettle();
       expect(find.text('Settings'), findsWidgets);
-      expect(find.text('Keyboard shortcuts'), findsOneWidget);
     },
   );
 
@@ -262,7 +677,9 @@ void main() {
     expect(find.text('gRPC configuration'), findsOneWidget);
     expect(
       find.descendant(
-        of: find.byKey(const Key('collection-request-kind-demo-rest-list-users')),
+        of: find.byKey(
+          const Key('collection-request-kind-demo-rest-list-users'),
+        ),
         matching: find.text('gRPC'),
       ),
       findsOneWidget,
@@ -272,6 +689,56 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('No .proto file selected'), findsOneWidget);
+    expect(find.text('Params'), findsNothing);
+    expect(find.text('Metadata'), findsOneWidget);
+    expect(find.text('Proto'), findsOneWidget);
+    await tester.tap(find.text('Message'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('grpc-message-editor')), findsOneWidget);
+    expect(find.text('REQUEST MESSAGE'), findsOneWidget);
+    expect(find.text('Query parameters'), findsNothing);
+  });
+
+  testWidgets('gRPC request JSON uses the shared collapsible preview', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(700, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final viewModel = workspaceViewModel();
+    addTearDown(viewModel.dispose);
+    viewModel.selectRequest('demo-grpc-create-order');
+    viewModel.selectRequestEditorTab('Body');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: ListenableBuilder(
+            listenable: viewModel,
+            builder: (context, _) => SizedBox(
+              width: 500,
+              child: RequestEditorPanel(viewModel: viewModel, compact: true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('grpc-message-input')), findsOneWidget);
+    await tester.tap(find.text('Preview'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('grpc-message-json-preview')), findsOneWidget);
+    expect(
+      find.byKey(const Key('grpc-request-json-toggle-root')),
+      findsOneWidget,
+    );
+    expect(find.text('Send message'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 
   // 场景：在窄桌面宽度下，设置页的语言控件应自适应布局而不会被压缩丢失。
@@ -293,10 +760,8 @@ void main() {
     expect(find.text('Simplified Chinese'), findsOneWidget);
   });
 
-  // 场景：宽屏工作台外壳加载示例数据后，点击 Send 应执行一次 fixture 请求并渲染结果。
-  testWidgets('sendreq wide desktop shell sends a fixture request', (
-    tester,
-  ) async {
+  // 场景：Enter 通过全局发送命令执行当前 REST 请求。
+  testWidgets('Enter sends the active REST request', (tester) async {
     // 固定测试画布，避免桌面三栏布局在默认测试尺寸下被压缩。
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
@@ -310,11 +775,81 @@ void main() {
 
     expect(find.text('No response yet'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
 
     expect(find.text('Execution result for this request'), findsOneWidget);
     expect(find.text('200'), findsWidgets);
+  });
+
+  testWidgets('Ctrl+S saves the active request and flushes persistence', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repository = _FlushRecordingApiAssetRepository.demo();
+    await tester.pumpWidget(
+      SendreqApp(
+        executionRuntime: DemoRequestExecutionRuntime(),
+        workspaceDependencies: workspaceTestDependencies(
+          assetRepository: repository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('request-url-text-field')),
+      'https://saved.example.test/users',
+    );
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+
+    expect(repository.flushCalls, 1);
+    expect(
+      repository.getRequest('demo-rest-list-users').urlTemplate,
+      'https://saved.example.test/users',
+    );
+  });
+
+  testWidgets('settings checks GitHub releases on every click', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final releases = FakeAppReleaseRepository(version: 'v0.2.0');
+    final launcher = FakeExternalReleaseLauncher();
+    await tester.pumpWidget(
+      SendreqApp(
+        appReleaseRepository: releases,
+        installedAppVersionProvider: const FakeInstalledAppVersionProvider(
+          '0.1.0',
+        ),
+        externalReleaseLauncher: launcher,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('settings-check-updates')));
+    await tester.pumpAndSettle();
+    expect(find.text('Version v0.2.0 is available.'), findsOneWidget);
+    expect(releases.calls, 1);
+
+    await tester.tap(find.byKey(const Key('settings-check-updates')));
+    await tester.pumpAndSettle();
+    expect(releases.calls, 2);
+    await tester.tap(find.byKey(const Key('settings-update-now')));
+    await tester.pumpAndSettle();
+    expect(
+      launcher.opened,
+      Uri.parse('https://github.com/kzzan/sendreq/releases/latest'),
+    );
   });
 
   testWidgets('response body formats valid JSON and can switch to raw', (
@@ -340,8 +875,17 @@ void main() {
     expect(find.byKey(const Key('response-json-line-numbers')), findsNothing);
     expect(find.byKey(const Key('response-json-tree')), findsOneWidget);
     expect(
-      find.byKey(const Key('response-formatted-horizontal-scroll')),
+      find.byKey(const Key('response-body-horizontal-scroll')),
       findsOneWidget,
+    );
+    final viewerRect = tester.getRect(
+      find.byKey(const Key('response-body-viewer')),
+    );
+    final toolbarRect = tester.getRect(
+      find.byKey(const Key('response-body-format-toggle')),
+    );
+    final viewportRect = tester.getRect(
+      find.byKey(const Key('response-body-viewport')),
     );
     final formattedJson = _responseJsonTreeText(tester);
     // 代码树由每层固定的两空格等价步距渲染，缩进不使用 Tab。
@@ -386,10 +930,50 @@ void main() {
     await tester.tap(formatToggle);
     await tester.pump();
     expect(
-      find.byKey(const Key('response-formatted-horizontal-scroll')),
-      findsNothing,
+      find.byKey(const Key('response-body-horizontal-scroll')),
+      findsOneWidget,
     );
     expect(find.byKey(const Key('response-raw-wrapped-text')), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const Key('response-body-viewer'))),
+      viewerRect,
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('response-body-format-toggle'))),
+      toolbarRect,
+    );
+    expect(
+      tester.getRect(find.byKey(const Key('response-body-viewport'))),
+      viewportRect,
+    );
+  });
+
+  testWidgets('response JSON tree controls localize in Chinese', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(
+        executionRuntime: DemoRequestExecutionRuntime(),
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: InMemoryWorkspacePreferenceStore(
+            const WorkspacePreferences(
+              appearance: AppearancePreference.dark,
+              locale: LocalePreference.simplifiedChinese,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, '发送').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('收起 JSON 节点'), findsWidgets);
   });
 
   // 场景：宽屏布局下应只有唯一的 Send 主按钮，避免出现重复的发送入口。
@@ -467,28 +1051,6 @@ void main() {
     );
   });
 
-  // 场景：关闭最后一个请求后仍可打开环境页，不应构造依赖活动请求的编辑器。
-  testWidgets('Environment remains usable without an active request', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Close List users'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Environments'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Environment variables'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   // 环境页采用“环境上下文 + 变量表”布局，切换环境与密钥揭示不应丢失编辑能力。
   testWidgets('environment workspace switches profiles and reveals secrets', (
     tester,
@@ -502,7 +1064,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Environments'));
+    await _openEnvironmentManager(tester);
     await tester.pumpAndSettle();
 
     expect(
@@ -524,7 +1086,9 @@ void main() {
     expect(protectedDelete, findsOneWidget);
     expect(tester.widget<IconButton>(protectedDelete).onPressed, isNull);
 
-    await tester.tap(find.byTooltip('Show or hide secret'));
+    final toggleSecret = find.byTooltip('Show or hide secret');
+    await tester.ensureVisible(toggleSecret);
+    await tester.tap(toggleSecret);
     await tester.pump();
     expect(
       find.byKey(const ValueKey('environment-value-staging-token-false')),
@@ -574,7 +1138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Environments'));
+    await _openEnvironmentManager(tester);
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('environment-authentication-type')),
@@ -665,14 +1229,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Environments'));
+    await _openEnvironmentManager(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('new-environment-button')));
     await tester.pump();
     final environmentNameInput = find.byKey(
       const Key('environment-name-input'),
     );
-    expect(tester.getSize(environmentNameInput).height, 36);
+    expect(
+      tester.getSize(environmentNameInput).height,
+      FormControlMetrics.standardHeight,
+    );
     await tester.enterText(environmentNameInput, 'Local');
     await tester.tap(find.widgetWithText(FilledButton, 'Create environment'));
     await tester.pumpAndSettle();
@@ -710,7 +1277,7 @@ void main() {
     expect(find.text('Local development'), findsNothing);
   });
 
-  testWidgets('pending environment changes remain visible in Collection', (
+  testWidgets('pending environment changes require an explicit close choice', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -722,7 +1289,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Environments'));
+    await _openEnvironmentManager(tester);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('new-environment-button')));
     await tester.pump();
@@ -733,12 +1300,17 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Create environment'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Collections'));
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Back to request'));
     await tester.pumpAndSettle();
-    expect(find.text('Environment changes are not saved.'), findsOneWidget);
-    await tester.tap(find.byTooltip('Save changes'));
+    expect(find.text('Apply environment changes?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('environment-close-apply')));
     await tester.pumpAndSettle();
-
+    expect(
+      find.byKey(const Key('environment-context-control')),
+      findsOneWidget,
+    );
+    await _openEnvironmentManager(tester);
+    await tester.pumpAndSettle();
     expect(find.text('Environment variables'), findsOneWidget);
   });
 
@@ -753,8 +1325,8 @@ void main() {
       await tester.pumpWidget(SendreqApp(executionRuntime: runtime));
       await tester.pumpAndSettle();
 
-      // 在环境界面创建当前流程专用的环境；新环境会自动成为活动环境。
-      await tester.tap(find.byTooltip('Environments'));
+      // 在环境界面创建当前流程专用的环境；创建只改变编辑目标。
+      await _openEnvironmentManager(tester);
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('new-environment-button')));
       await tester.pumpAndSettle();
@@ -788,10 +1360,18 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // 通过界面新建 GET 请求；地址栏会把 query string 同步为 Params 行。
-      await tester.tap(find.byTooltip('Collections'));
+      // 执行上下文必须通过独立命令显式切换。
+      await tester.tap(find.byKey(const Key('use-environment-for-requests')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('New request'));
+
+      // 通过界面新建 GET 请求；地址栏会把 query string 同步为 Params 行。
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Back to request'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('environment-close-apply')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('new-request-type-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('REST').last);
       await tester.pumpAndSettle();
       const templateUrl = '{{baseUrl}}/tools/geoip/lookup?input={{domain}}';
       await tester.enterText(
@@ -836,7 +1416,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Environments'));
+    await _openEnvironmentManager(tester);
     await tester.pumpAndSettle();
     await tester.tapAt(
       tester.getCenter(find.byKey(const ValueKey('environment-item-staging'))),
@@ -863,7 +1443,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Collections'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('request-working-view-all')),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(TextButton, 'Collections'), findsOneWidget);
     expect(find.widgetWithText(TextButton, 'Request'), findsOneWidget);
     expect(find.text('Response'), findsOneWidget);
@@ -911,8 +1494,140 @@ void main() {
     expect(find.text('Sendreq Demo Example'), findsOneWidget);
   });
 
-  // 场景：最左侧边栏固定为紧凑图标栏，不提供展开或收起入口。
-  testWidgets('far left sidebar remains compact without resize controls', (
+  testWidgets(
+    'Collection keeps its planned workspace structure at target widths',
+    (tester) async {
+      for (final width in [375.0, 768.0, 1024.0, 1440.0]) {
+        tester.view.physicalSize = Size(width, 900);
+        tester.view.devicePixelRatio = 1;
+        await tester.pumpWidget(
+          SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+        );
+        await tester.pumpAndSettle();
+
+        if (width < 1240) {
+          await tester.tap(find.widgetWithText(TextButton, 'Collections'));
+          await tester.pumpAndSettle();
+        }
+
+        final collectionPanel = find.byKey(const Key('collection-panel'));
+        final environmentSelector = find.byKey(
+          const Key('request-topbar-environment-selector'),
+        );
+        final resourceBrowser = find.byKey(
+          const Key('collection-resource-browser'),
+        );
+        expect(collectionPanel, findsOneWidget);
+        expect(environmentSelector, findsOneWidget);
+        expect(resourceBrowser, findsOneWidget);
+        expect(tester.getRect(collectionPanel).right, lessThanOrEqualTo(width));
+        expect(
+          tester.getRect(environmentSelector).right,
+          lessThanOrEqualTo(width),
+        );
+        expect(tester.getRect(resourceBrowser).right, lessThanOrEqualTo(width));
+
+        if (width >= 1240) {
+          expect(
+            find.byKey(const Key('collection-desktop-workspace')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('collection-narrow-workspace')),
+            findsNothing,
+          );
+          expect(tester.getSize(collectionPanel).width, 280);
+        } else {
+          expect(
+            find.byKey(const Key('collection-narrow-workspace')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('collection-desktop-workspace')),
+            findsNothing,
+          );
+          for (final tab in [
+            find.widgetWithText(TextButton, 'Collections'),
+            find.widgetWithText(TextButton, 'Request'),
+            find.widgetWithText(TextButton, 'Response'),
+          ]) {
+            expect(tester.getRect(tab).right, lessThanOrEqualTo(width));
+          }
+        }
+      }
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+    },
+  );
+
+  testWidgets('Collection exposes node actions without requiring right click', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('collection-menu-collection-sendreq-demo')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('request-menu-demo-rest-list-users')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('request-menu-demo-rest-list-users')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rename'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    await tester.tapAt(const Offset(2, 2));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('collection-menu-collection-sendreq-demo')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Export API documentation...'), findsOneWidget);
+  });
+
+  testWidgets('Collection resource browser exposes localized semantics', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    tester.view.physicalSize = const Size(1440, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      SendreqApp(
+        workspaceDependencies: workspaceTestDependencies(
+          preferenceStore: InMemoryWorkspacePreferenceStore(
+            const WorkspacePreferences(
+              appearance: AppearancePreference.dark,
+              locale: LocalePreference.simplifiedChinese,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel(RegExp('集合资源')), findsOneWidget);
+    expect(find.byTooltip('新建请求'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  // 场景：宽屏显示可读协议导航，且不提供手动尺寸状态。
+  testWidgets('far left sidebar exposes protocol views without resize state', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -925,107 +1640,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('sendreq'), findsNothing);
+    expect(find.text('sendreq'), findsOneWidget);
     expect(find.byTooltip('Collapse sidebar'), findsNothing);
     expect(find.byTooltip('Expand sidebar'), findsNothing);
-    expect(find.byTooltip('Collections'), findsOneWidget);
-  });
-
-  // 场景：从外壳操作入口打开命令面板，并列出可用的快捷命令。
-  testWidgets('command palette opens from the shell action', (tester) async {
-    tester.view.physicalSize = const Size(1000, 760);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Open command palette'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Command palette'), findsOneWidget);
-    expect(find.text('Send active request'), findsOneWidget);
-  });
-
-  // 场景：命令面板可筛选资源、保留全局命令，并能打开请求和工作区分区。
-  testWidgets('command palette filters and opens workspace resources', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1000, 760);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Open command palette'));
-    await tester.pumpAndSettle();
-    final palette = find.byType(AlertDialog);
-    final searchField = find.descendant(
-      of: palette,
-      matching: find.byType(TextField),
-    );
-    expect(
-      find.descendant(of: palette, matching: find.text('Save active resource')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: palette, matching: find.text('Send active request')),
-      findsOneWidget,
-    );
-
-    await tester.enterText(searchField, 'not-a-resource');
-    await tester.pumpAndSettle();
-    expect(find.text('No matching resources'), findsOneWidget);
-    expect(
-      find.descendant(of: palette, matching: find.text('Save active resource')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: palette, matching: find.text('Send active request')),
-      findsOneWidget,
-    );
-
-    await tester.enterText(searchField, 'Create user');
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: palette,
-        matching: find.widgetWithText(ListTile, 'Create user'),
-      ),
-      findsOneWidget,
-    );
-    await tester.tap(
-      find.descendant(
-        of: palette,
-        matching: find.widgetWithText(ListTile, 'Create user'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byTooltip('Close Create user'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Open command palette'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.byType(TextField),
-      ),
-      'Settings',
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AlertDialog),
-        matching: find.widgetWithText(ListTile, 'Settings'),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Keyboard shortcuts'), findsOneWidget);
+    expect(find.text('All requests'), findsOneWidget);
+    expect(find.text('REST'), findsWidgets);
+    expect(find.text('WebSocket'), findsWidgets);
+    expect(find.text('gRPC'), findsWidgets);
   });
 
   // 场景：点击集合树中的请求会打开请求标签页，关闭后对应标签应消失。
@@ -1065,17 +1686,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Create user'), findsOneWidget);
-    await tester.tap(find.text('REST').first);
+    final restFolder = find.byKey(
+      const ValueKey('collection-folder-folder-demo-rest'),
+    );
+    await tester.tap(restFolder);
     await tester.pump();
     expect(find.text('Create user'), findsNothing);
 
     await tester.tap(find.text('Sendreq Demo Example').first);
     await tester.pump();
-    expect(find.text('REST'), findsNothing);
+    expect(restFolder, findsNothing);
 
     await tester.tap(find.text('Sendreq Demo Example').first);
     await tester.pump();
-    expect(find.text('REST'), findsOneWidget);
+    expect(restFolder, findsOneWidget);
   });
 
   // 场景：第二栏搜索仅临时筛选树，不改变侧栏宽度或用户的展开状态。
@@ -1174,7 +1798,9 @@ void main() {
     expect(find.text('Collections'), findsWidgets);
     expect(find.text('No requests yet'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'New request'));
+    await tester.tap(find.byKey(const Key('empty-new-request-type-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('REST').last);
     await tester.pumpAndSettle();
 
     expect(find.text('New collection 1'), findsOneWidget);
@@ -1182,8 +1808,8 @@ void main() {
     expect(find.byKey(const Key('request-url-input')), findsOneWidget);
   });
 
-  // 场景：右键文件夹节点应复用与集合一致的资源操作菜单。
-  testWidgets('folder right click uses the same resource actions', (
+  // 场景：右键删除分组只移除该分组，集合与其他协议分组必须继续显示。
+  testWidgets('folder right click deletes only the selected group', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -1196,7 +1822,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('REST').first),
+      tester.getCenter(
+        find.byKey(const ValueKey('collection-folder-folder-demo-rest')),
+      ),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1205,10 +1833,30 @@ void main() {
     expect(find.text('Rename'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
     expect(find.text('Collapse'), findsNothing);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete group'), findsOneWidget);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sendreq Demo Example'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-folder-folder-demo-rest')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey('collection-folder-folder-demo-websocket')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('collection-folder-folder-demo-grpc')),
+      findsOneWidget,
+    );
   });
 
-  // 场景：集合右键菜单的“新建文件夹”应在该集合内创建带递增编号的文件夹。
-  testWidgets('collection menu creates a folder in that collection', (
+  // 场景：集合右键菜单的“新建分组”应在该集合内创建带递增编号的分组。
+  testWidgets('collection menu creates a group in that collection', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -1225,10 +1873,10 @@ void main() {
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New folder'));
+    await tester.tap(find.text('New group'));
     await tester.pumpAndSettle();
 
-    expect(find.text('New folder 4'), findsOneWidget);
+    expect(find.text('New group 4'), findsOneWidget);
   });
 
   // 场景：请求带未保存修改时删除，应先弹窗让用户明确选择保存后删除。
@@ -1333,7 +1981,7 @@ void main() {
     expect(row.width, header.width);
   });
 
-  // 场景：修改 URL 后当前草稿应立即标记为未保存，并显示保存入口。
+  // 场景：修改 URL 后当前草稿应立即标记为未保存。
   testWidgets('editing URL marks the active runtime draft dirty', (
     tester,
   ) async {
@@ -1351,8 +1999,6 @@ void main() {
       'https://example.test/status',
     );
     await tester.pump();
-
-    expect(find.byTooltip('Save active resource'), findsOneWidget);
   });
 
   // 场景：在不同请求间切换时，URL 编辑器应刷新为对应请求的地址。
@@ -1373,7 +2019,7 @@ void main() {
     var field = tester.widget<TextFormField>(
       find.byKey(const Key('request-url-text-field')),
     );
-    expect(field.controller!.text, 'http://127.0.0.1:8081/api/v1/users');
+    expect(field.controller!.text, 'http://127.0.0.1:8081/api/v1/basic/users');
 
     await tester.tap(find.text('List users').first);
     await tester.pumpAndSettle();
@@ -1498,37 +2144,31 @@ void main() {
     await tester.pumpWidget(SendreqApp(executionRuntime: runtime));
     await tester.pumpAndSettle();
 
-    final collectionSelector = find.byKey(
-      const Key('collection-environment-selector'),
+    final requestSelector = find.byKey(
+      const Key('request-topbar-environment-selector'),
     );
-    expect(collectionSelector, findsOneWidget);
-    expect(find.byKey(const Key('request-environment-selector')), findsNothing);
-    expect(tester.getSize(collectionSelector).width, 164);
+    expect(requestSelector, findsOneWidget);
+    final selectorWidth = tester.getSize(requestSelector).width;
+    expect(selectorWidth, greaterThanOrEqualTo(164));
     expect(
-      find.descendant(of: collectionSelector, matching: find.text('Staging')),
+      find.descendant(of: requestSelector, matching: find.text('ENVIRONMENT')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('collection-environment-base-url')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const Key('collection-environment-authentication')),
+      find.descendant(of: requestSelector, matching: find.text('Staging')),
       findsOneWidget,
     );
 
-    await tester.tap(collectionSelector);
+    await tester.tap(requestSelector);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Production').last);
     await tester.pumpAndSettle();
 
     expect(
-      find.descendant(
-        of: collectionSelector,
-        matching: find.text('Production'),
-      ),
+      find.descendant(of: requestSelector, matching: find.text('Production')),
       findsOneWidget,
     );
+    expect(tester.getSize(requestSelector).width, selectorWidth);
     await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
     await tester.pumpAndSettle();
     expect(runtime.resolvedUrls, [
@@ -1536,8 +2176,7 @@ void main() {
     ]);
   });
 
-  // 场景：编辑正文后保存，应提示成功并清除请求标题上的脏标记。
-  testWidgets('request body can be saved and clears its dirty marker', (
+  testWidgets('Collection preserves a natural locate-to-response workflow', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1440, 900);
@@ -1550,8 +2189,58 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Create user').first);
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Close Create user'), findsOneWidget);
+    expect(
+      find.byKey(const Key('request-topbar-environment-selector')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('request-topbar-environment-selector')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Production').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Production'), findsWidgets);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('response-body-viewer')), findsOneWidget);
+    final responseRect = tester.getRect(
+      find.byKey(const Key('response-body-viewer')),
+    );
+    await tester.tap(find.byKey(const Key('response-body-format-toggle')));
     await tester.pump();
-    await tester.tap(find.text('Body'));
+    expect(find.byKey(const Key('response-raw-wrapped-text')), findsOneWidget);
+    expect(
+      tester.getRect(find.byKey(const Key('response-body-viewer'))),
+      responseRect,
+    );
+    expect(find.byTooltip('Close Create user'), findsOneWidget);
+    expect(
+      find.byKey(const Key('request-topbar-environment-selector')),
+      findsOneWidget,
+    );
+  });
+
+  // 场景：编辑正文后继续保留草稿状态，由用户在后续流程明确决定是否持久化。
+  testWidgets('request body remains an editable draft', (tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create user').first);
+    await tester.pump();
+    final bodyTab = find.text('Body');
+    await tester.ensureVisible(bodyTab);
+    await tester.pumpAndSettle();
+    await tester.tap(bodyTab);
     await tester.pump();
     await tester.enterText(
       find.byKey(const Key('request-body-input')),
@@ -1560,11 +2249,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Create user *'), findsOneWidget);
-    await tester.tap(find.byTooltip('Save active resource'));
-    await tester.pump();
-
-    expect(find.text('Request changes saved.'), findsOneWidget);
-    expect(find.text('Create user *'), findsNothing);
+    expect(find.text('Create user *'), findsOneWidget);
   });
 
   // 场景：授权设置是独立的固定配置，不会在 Headers 中生成重复的 Authorization 行。
@@ -1584,7 +2269,9 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('request-authentication-source')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Request-specific').last);
+    await tester.tap(
+      find.text('Request only (does not inherit environment)').last,
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('request-authentication-type')));
     await tester.pumpAndSettle();
@@ -1637,7 +2324,9 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(const Key('request-authentication-source')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Request-specific').last);
+    await tester.tap(
+      find.text('Request only (does not inherit environment)').last,
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('request-authentication-type')));
     await tester.pumpAndSettle();
@@ -1694,6 +2383,53 @@ void main() {
     );
   });
 
+  testWidgets('narrow JSON request body preserves content type space', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(TextButton, 'Collections'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create user').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Request'));
+    await tester.pumpAndSettle();
+    final bodyTab = find.text('Body');
+    expect(tester.getRect(bodyTab).right, lessThanOrEqualTo(375.0));
+    await tester.tap(bodyTab);
+    await tester.pumpAndSettle();
+
+    final contentType = find.byTooltip('Change body content type');
+    final formatAction = find.byKey(const Key('request-body-format-json'));
+    expect(tester.takeException(), isNull);
+    expect(contentType, findsOneWidget);
+    expect(formatAction, findsOneWidget);
+    expect(tester.getRect(contentType).right, lessThanOrEqualTo(375.0));
+    expect(tester.getRect(formatAction).right, lessThanOrEqualTo(375.0));
+    expect(find.text('Format JSON'), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('request-body-input')),
+      '{"name":"Mary"}',
+    );
+    await tester.tap(formatAction);
+    await tester.pump();
+    expect(
+      tester
+          .widget<TextFormField>(find.byKey(const Key('request-body-input')))
+          .controller!
+          .text,
+      '{\n  "name": "Mary"\n}',
+    );
+  });
+
   // 场景：仅当正文 Content-Type 为 JSON 类时，才提供“格式化 JSON”入口。
   testWidgets('body formatting is only offered for JSON content types', (
     tester,
@@ -1742,6 +2478,53 @@ void main() {
     expect(find.text('Choose files'), findsOneWidget);
     expect(find.text('Form fields'), findsOneWidget);
     expect(find.byKey(const Key('request-body-input')), findsNothing);
+  });
+
+  testWidgets('URL encoded and XML body modes use their matching editors', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create user').first);
+    await tester.pump();
+    await tester.tap(find.text('Body'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Change body content type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('application/x-www-form-urlencoded'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('URL encoded fields'), findsOneWidget);
+    expect(find.byKey(const Key('request-body-input')), findsNothing);
+    await tester.tap(find.byTooltip('Add form field'));
+    await tester.pump();
+    final formKeyInput = find.byWidgetPredicate(
+      (widget) =>
+          widget is TextFormField &&
+          widget.key is ValueKey &&
+          (widget.key! as ValueKey).value is String &&
+          ((widget.key! as ValueKey).value as String).startsWith(
+            'urlencoded-field-key-',
+          ),
+    );
+    expect(formKeyInput, findsOneWidget);
+    await tester.enterText(formKeyInput, 'email');
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Change body content type'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('application/xml'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('request-body-input')), findsOneWidget);
+    expect(find.text('Format JSON'), findsNothing);
   });
 
   // 场景：多个上传文件共享同一可编辑的批量字段名，应用后应统一生效。
@@ -1850,116 +2633,75 @@ void main() {
     expect(find.byTooltip('Close List users'), findsNothing);
   });
 
-  // 场景：成功发送后历史记录应保留响应快照，可查看执行详情与请求快照。
-  testWidgets('history opens the response snapshot from a successful send', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
+  // 场景：从响应直接创建已保存 Mock Server，原请求草稿保持不变。
+  testWidgets(
+    'response creates a saved Mock Server and preserves the request draft',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('History'));
-    await tester.pump();
-    await tester.tap(find.byTooltip('Open execution snapshot'));
-    await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('request-url-input')),
+        'https://staging.sendreq.io/api/v1/users?source=mock-draft',
+      );
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Create Mock Server from response'));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Execution snapshot · Staging'), findsOneWidget);
-    expect(find.textContaining('http://127.0.0.1:8081'), findsWidgets);
+      expect(find.byKey(const Key('saved-mock-name-input')), findsOneWidget);
+      expect(
+        find.byKey(const Key('saved-mock-variant-status-input')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('saved-mock-endpoint-path-input')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('saved-mock-secondary-actions')),
+        findsOneWidget,
+      );
+      final endpointChoice = find.descendant(
+        of: find.byKey(const Key('saved-mock-endpoint-selector')),
+        matching: find.byType(TextButton),
+      );
+      expect(tester.getSize(endpointChoice.first).height, 30);
 
-    await tester.tap(find.text('Request snapshot'));
-    await tester.pump();
-    expect(find.text('Request at execution'), findsOneWidget);
-  });
+      await tester.enterText(
+        find.byKey(const Key('saved-mock-endpoint-path-input')),
+        '/mock-users',
+      );
+      await tester.enterText(
+        find.byKey(const Key('saved-mock-variant-status-input')),
+        '201',
+      );
+      await tester.pump();
+      final save = tester.widget<FilledButton>(
+        find.byKey(const Key('saved-mock-save-button')),
+      );
+      expect(save.onPressed, isNotNull);
+      await tester.tap(find.byKey(const Key('saved-mock-save-button')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('saved-mock-save-button')), findsNothing);
+      expect(
+        find.byKey(const Key('saved-mock-lifecycle-button')),
+        findsOneWidget,
+      );
 
-  // 场景：发送失败（网络错误）也应写入历史，重新打开时提供返回编辑器的入口。
-  testWidgets('failed sends are recorded and reopen with an edit action', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(SendreqApp(executionRuntime: _FailingRuntime()));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
-    await tester.pumpAndSettle();
-    expect(find.text('No route to host.'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('History'));
-    await tester.pump();
-    expect(find.text('NETWORK'), findsOneWidget);
-    await tester.tap(find.byTooltip('Open execution snapshot'));
-    await tester.pump();
-
-    expect(
-      find.widgetWithText(OutlinedButton, 'Back to request editor'),
-      findsOneWidget,
-    );
-  });
-
-  // 场景：从响应创建临时 Mock 并启动/停止，返回后原请求草稿应原样保留。
-  testWidgets('response creates a Quick Mock and preserves the request draft', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.enterText(
-      find.byKey(const Key('request-url-input')),
-      'https://staging.sendreq.io/api/v1/users?source=mock-draft',
-    );
-    await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Use response for Quick Mock'));
-    await tester.pump();
-
-    expect(find.text('Quick Mock'), findsWidgets);
-    expect(find.byKey(const Key('mock-status-input')), findsOneWidget);
-    expect(find.byKey(const Key('mock-route-input')), findsOneWidget);
-    expect(find.byTooltip('Add field'), findsOneWidget);
-    await tester.enterText(find.byKey(const Key('mock-status-input')), '600');
-    await tester.pump();
-    expect(find.text('Enter an HTTP status from 100 to 599.'), findsOneWidget);
-    expect(
-      find.textContaining('https://staging.sendreq.io/api/v1/users'),
-      findsWidgets,
-    );
-    expect(find.textContaining('sendreq.desktop'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Start Quick Mock'));
-    await tester.pumpAndSettle();
-    expect(find.text('Running'), findsOneWidget);
-    expect(find.textContaining('http://127.0.0.1:'), findsOneWidget);
-
-    await tester.tap(find.widgetWithText(FilledButton, 'Stop Quick Mock'));
-    await tester.pumpAndSettle();
-    expect(find.text('Stopped'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Back to response'));
-    await tester.pump();
-    expect(find.text('Response'), findsOneWidget);
-    expect(find.textContaining('sendreq.desktop'), findsOneWidget);
-    expect(find.text('List users *'), findsOneWidget);
-    expect(
-      find.text('https://staging.sendreq.io/api/v1/users?source=mock-draft'),
-      findsOneWidget,
-    );
-  });
+      await tester.tap(find.byKey(const Key('saved-mock-secondary-actions')));
+      await tester.pumpAndSettle();
+      expect(find.text('Archive server'), findsOneWidget);
+      expect(find.text('Delete server'), findsOneWidget);
+    },
+  );
 
   // 场景：新请求以脏草稿打开，未填 URL 时禁止发送；填写后可发送并可保存去除脏标记。
   testWidgets('new request opens as a dirty draft and requires a URL to send', (
@@ -1974,8 +2716,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('New request'));
-    await tester.pump();
+    await tester.tap(find.byKey(const Key('new-request-type-menu')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('REST').last);
+    await tester.pumpAndSettle();
 
     expect(find.text('New request 1 *'), findsOneWidget);
     final send = tester.widget<FilledButton>(
@@ -1993,70 +2737,11 @@ void main() {
       find.widgetWithText(FilledButton, 'Send').first,
     );
     expect(enabledSend.onPressed, isNotNull);
-    await tester.tap(find.byTooltip('Save active resource'));
-    await tester.pump();
-    expect(find.text('New request 1 *'), findsNothing);
-  });
-
-  testWidgets(
-    // 场景：从响应生成文档草稿并复制 curl 示例；试运行应回到请求编辑器重新执行。
-    'response creates a documentation draft and trial run reopens request',
-    (tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(
-        SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.widgetWithText(FilledButton, 'Send').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Generate documentation'));
-      await tester.pump();
-
-      expect(find.text('Documentation draft'), findsOneWidget);
-      expect(find.text('API reference'), findsOneWidget);
-      expect(find.textContaining('curl -X GET'), findsWidgets);
-      expect(find.textContaining('sendreq.desktop'), findsWidgets);
-
-      await tester.tap(find.byTooltip('Copy API reference').first);
-      await tester.pump();
-      expect(find.text('API reference copied.'), findsOneWidget);
-
-      await tester.tap(find.widgetWithText(OutlinedButton, 'Try it'));
-      await tester.pump();
-      expect(find.text('No response yet'), findsOneWidget);
-      expect(find.text('List users'), findsWidgets);
-    },
-  );
-
-  // 场景：Dashboard 应展示运行时统计，并能直接创建新请求。
-  testWidgets('Dashboard shows the runtime trace and creates a request', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Dashboard'));
-    await tester.pump();
-    expect(find.text('Request volume'), findsOneWidget);
-    expect(find.text('Environment health'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'New request'));
-    await tester.pump();
-
     expect(find.text('New request 1 *'), findsOneWidget);
   });
 
-  // 场景：在 Dashboard 粘贴 OpenAPI JSON 导入后，应生成对应请求并给出导入结果提示。
-  testWidgets('Dashboard imports OpenAPI JSON into a request', (tester) async {
+  // 场景：从 Requests 的 Collection 菜单导入 OpenAPI JSON。
+  testWidgets('Requests imports OpenAPI JSON into a request', (tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -2065,9 +2750,9 @@ void main() {
       SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Dashboard'));
-    await tester.pump();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Import OpenAPI'));
+    await tester.tap(find.byTooltip('Collection actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import OpenAPI'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextField).last,
@@ -2077,6 +2762,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('List projects'), findsWidgets);
+    expect(find.byTooltip('1 notifications need attention'), findsOneWidget);
+    await tester.tap(find.byTooltip('1 notifications need attention'));
+    await tester.pumpAndSettle();
     expect(
       find.text('1 OpenAPI requests imported into Imported OpenAPI.'),
       findsOneWidget,
@@ -2096,9 +2784,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Dashboard'));
-    await tester.pump();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Import OpenAPI'));
+    await tester.tap(find.byTooltip('Collection actions'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Import OpenAPI'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextField).last,
@@ -2118,102 +2806,35 @@ void main() {
       '{\n  "email": "ops@sendreq.io",\n  "remember": true\n}',
     );
   });
+}
 
-  // 场景：把发送快捷键改为 Ctrl+Space（含输入法冲突提示）并保存后，
-  // 在其他页面按下该组合键应仍能全局触发发送。
-  testWidgets('Settings changes Send to Ctrl+Space and applies it globally', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      SendreqApp(executionRuntime: DemoRequestExecutionRuntime()),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pump();
-    expect(find.text('Keyboard shortcuts'), findsOneWidget);
-    await tester.tap(find.text('Ctrl+Space'));
-    await tester.pump();
-    expect(
-      find.textContaining('can conflict with input methods'),
-      findsOneWidget,
-    );
-    expect(find.text('Save preferences'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Collections'));
-    await tester.pump();
-    // 模拟按下 Ctrl+Space 组合键，验证预览中的快捷键会立即在当前会话生效。
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.space);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('sendreq.desktop'), findsOneWidget);
+class _FlushRecordingApiAssetRepository extends InMemoryApiAssetRepository {
+  _FlushRecordingApiAssetRepository({
+    required super.collections,
+    required super.openTabs,
+    required super.activeRequestId,
   });
 
-  // 场景：录制自定义组合键后，即使 URL 输入框持有焦点也应触发发送。
-  testWidgets('recorded custom Send shortcut works from a focused text field', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(1440, 900);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final preferenceStore = InMemoryWorkspacePreferenceStore();
-    await tester.pumpWidget(
-      SendreqApp(
-        executionRuntime: DemoRequestExecutionRuntime(),
-        workspaceDependencies: workspaceTestDependencies(
-          preferenceStore: preferenceStore,
+  factory _FlushRecordingApiAssetRepository.demo() {
+    const requestId = 'demo-rest-list-users';
+    return _FlushRecordingApiAssetRepository(
+      collections: const [DemoExampleCatalog.collection],
+      openTabs: [
+        RequestTab(
+          id: 'tab-$requestId',
+          requestId: requestId,
+          title: 'List users',
+          openedAt: DateTime.utc(2026, 8, 8),
         ),
-      ),
+      ],
+      activeRequestId: requestId,
     );
-    await tester.pumpAndSettle();
+  }
 
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('record-send-shortcut-button')));
-    await tester.pumpAndSettle();
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-    expect(find.text('Ctrl+Shift+D'), findsWidgets);
+  int flushCalls = 0;
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Save preferences'));
-    await tester.pumpAndSettle();
-
-    // 显式保存后，重建应用应从持久化配置恢复录制的快捷键。
-    await tester.pumpWidget(
-      SendreqApp(
-        executionRuntime: DemoRequestExecutionRuntime(),
-        workspaceDependencies: workspaceTestDependencies(
-          preferenceStore: preferenceStore,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('Ctrl+Shift+D'), findsWidgets);
-    await tester.tap(find.byTooltip('Collections'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('request-url-input')));
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyD);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pumpAndSettle();
-
-    expect(find.textContaining('sendreq.desktop'), findsOneWidget);
-  });
+  @override
+  Future<void> flush() async => flushCalls++;
 }
 
 String _responseJsonTreeText(WidgetTester tester) => tester
@@ -2226,21 +2847,13 @@ String _responseJsonTreeText(WidgetTester tester) => tester
     .map((text) => text.textSpan!.toPlainText())
     .join('\n');
 
-/// 每次都直接返回网络错误的运行器，用于验证失败历史与错误提示相关交互。
-class _FailingRuntime implements RequestExecutionRuntime {
-  @override
-  void cancel() {}
-
-  @override
-  Future<RuntimeResponse> send({
-    required RequestDraft draft,
-    required String resolvedUrl,
-  }) => Future<RuntimeResponse>.error(
-    const RuntimeRequestException(
-      RuntimeErrorCategory.network,
-      'No route to host.',
-    ),
+Future<void> _openEnvironmentManager(WidgetTester tester) async {
+  await tester.tap(
+    find.byKey(const Key('request-topbar-environment-selector')),
   );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Manage environments...'));
+  await tester.pumpAndSettle();
 }
 
 /// 记录经 UI 发送的最终地址，并返回与 GeoIP 接口结构一致的 JSON 响应。
@@ -2267,5 +2880,22 @@ class _RecordingGeoIpRuntime implements RequestExecutionRuntime {
         ],
       ),
     );
+  }
+}
+
+class _FailOncePreferenceStore implements WorkspacePreferenceStore {
+  bool _shouldFail = true;
+  final List<WorkspacePreferences> saved = [];
+
+  @override
+  Future<WorkspacePreferences> load() async => WorkspacePreferences.defaults;
+
+  @override
+  Future<void> save(WorkspacePreferences preferences) async {
+    if (_shouldFail) {
+      _shouldFail = false;
+      throw StateError('unavailable');
+    }
+    saved.add(preferences);
   }
 }

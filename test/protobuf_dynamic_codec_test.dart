@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sendreq/data/services/protobuf_descriptor_set.dart';
-import 'package:sendreq/data/services/protobuf_dynamic_codec.dart';
+import 'package:sendreq/domain/grpc/protobuf_descriptor_set.dart';
+import 'package:sendreq/domain/grpc/protobuf_dynamic_codec.dart';
 
 void main() {
   // 构造一个含 oneof、枚举、map 与 repeated 消息的虚拟描述符集，

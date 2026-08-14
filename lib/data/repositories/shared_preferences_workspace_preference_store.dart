@@ -1,14 +1,12 @@
-import 'dart:convert';
-
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../domain/preferences/workspace_preferences.dart';
-import 'file_workspace_preference_store.dart';
-import '../../domain/repositories/workspace_preference_store.dart';
+import 'package:sendreq/domain/preferences/workspace_preferences.dart';
+import 'package:sendreq/data/repositories/file_workspace_preference_store.dart';
+import 'package:sendreq/domain/repositories/workspace_preference_store.dart';
 
 /// 基于平台 KV 存储的轻量工作区偏好实现。
 ///
-/// Collection 与执行历史不使用该存储。首次读取时可将旧
+/// Collection 与执行结果不使用该存储。首次读取时可将旧
 /// [FileWorkspacePreferenceStore] 的配置迁入，并只在迁入成功后写入版本标记。
 class SharedPreferencesWorkspacePreferenceStore
     implements WorkspacePreferenceStore {
@@ -19,7 +17,7 @@ class SharedPreferencesWorkspacePreferenceStore
   });
 
   /// 当前偏好存储的 schema 版本。
-  static const _schemaVersion = 1;
+  static const _schemaVersion = 3;
 
   /// 写入的 schema 版本标记键。
   static const _schemaKey = 'sendreq.preferences.schema_version';
@@ -27,7 +25,7 @@ class SharedPreferencesWorkspacePreferenceStore
   /// 外观偏好的存储键。
   static const _appearanceKey = 'sendreq.preferences.appearance';
 
-  /// 发送快捷键偏好的存储键。
+  /// 已废弃的发送快捷键存储键；保存时主动清除。
   static const _sendShortcutKey = 'sendreq.preferences.send_shortcut';
 
   /// 语言偏好的存储键。
@@ -35,12 +33,14 @@ class SharedPreferencesWorkspacePreferenceStore
 
   /// 字体偏好的存储键。
   static const _fontKey = 'sendreq.preferences.font';
+  static const _codeFontKey = 'sendreq.preferences.code_font';
+  static const _codeFontSizeKey = 'sendreq.preferences.code_font_size';
 
-  /// 自定义快捷键（JSON）的存储键。
+  /// 已废弃的自定义快捷键存储键；保存时主动清除。
   static const _customShortcutKey = 'sendreq.preferences.custom_shortcut';
 
-  /// 文档输出目录的存储键。
-  static const _documentationDirectoryKey =
+  /// 旧版本不再使用的输出目录键；保存时主动清除。
+  static const _legacyOutputDirectoryKey =
       'sendreq.preferences.documentation_output_directory';
 
   /// 底层平台 KV 存储。
@@ -94,22 +94,16 @@ class SharedPreferencesWorkspacePreferenceStore
   Future<void> save(WorkspacePreferences preferences) async {
     // 完整快照按固定顺序写入；ViewModel 负责将多个快照串行化。
     await _preferences.setString(_appearanceKey, preferences.appearance.name);
-    await _preferences.setString(
-      _sendShortcutKey,
-      preferences.sendShortcut.name,
-    );
     await _preferences.setString(_localeKey, preferences.locale.name);
     await _preferences.setString(_fontKey, preferences.font.name);
-    await _preferences.setString(
-      _customShortcutKey,
-      jsonEncode(preferences.customSendShortcut.toJson()),
+    await _preferences.setString(_codeFontKey, preferences.codeFont.name);
+    await _preferences.setDouble(
+      _codeFontSizeKey,
+      preferences.codeFontSize.clamp(10, 18),
     );
-    final directory = preferences.documentationOutputDirectory;
-    if (directory == null) {
-      await _preferences.remove(_documentationDirectoryKey);
-    } else {
-      await _preferences.setString(_documentationDirectoryKey, directory);
-    }
+    await _preferences.remove(_sendShortcutKey);
+    await _preferences.remove(_customShortcutKey);
+    await _preferences.remove(_legacyOutputDirectoryKey);
     await _preferences.setInt(_schemaKey, _schemaVersion);
   }
 
@@ -124,29 +118,24 @@ class SharedPreferencesWorkspacePreferenceStore
   /// 从 KV 读取并解析当前偏好；任一字段无效时回退默认值。
   WorkspacePreferences _readCurrent() {
     final appearance = _appearance(_preferences.getString(_appearanceKey));
-    final shortcut = _shortcut(_preferences.getString(_sendShortcutKey));
     final locale = _locale(_preferences.getString(_localeKey));
     final font = _font(_preferences.getString(_fontKey));
-    final customShortcut = _customShortcut(
-      _preferences.getString(_customShortcutKey),
-    );
-    final directory = _preferences.getString(_documentationDirectoryKey);
+    final codeFont =
+        _codeFont(_preferences.getString(_codeFontKey)) ??
+        CodeFontPreference.jetBrainsMono;
+    final codeFontSize =
+        _preferences.getDouble(_codeFontSizeKey)?.clamp(10, 18).toDouble() ??
+        12;
     // 任一字段缺失或非法时，整体回退到默认配置。
-    if (appearance == null ||
-        shortcut == null ||
-        locale == null ||
-        font == null ||
-        customShortcut == null ||
-        (directory != null && directory.trim().isEmpty)) {
+    if (appearance == null || locale == null || font == null) {
       return WorkspacePreferences.defaults;
     }
     return WorkspacePreferences(
       appearance: appearance,
-      sendShortcut: shortcut,
       locale: locale,
       font: font,
-      customSendShortcut: customShortcut,
-      documentationOutputDirectory: directory?.trim(),
+      codeFont: codeFont,
+      codeFontSize: codeFontSize,
     );
   }
 
@@ -155,14 +144,6 @@ class SharedPreferencesWorkspacePreferenceStore
     'light' => AppearancePreference.light,
     'dark' => AppearancePreference.dark,
     'system' => AppearancePreference.system,
-    _ => null,
-  };
-
-  /// 将存储字符串解析为发送快捷键偏好，无法识别时返回 null。
-  SendShortcutPreference? _shortcut(String? value) => switch (value) {
-    'controlEnter' => SendShortcutPreference.controlEnter,
-    'controlSpace' => SendShortcutPreference.controlSpace,
-    'custom' => SendShortcutPreference.custom,
     _ => null,
   };
 
@@ -176,21 +157,17 @@ class SharedPreferencesWorkspacePreferenceStore
 
   /// 将存储字符串解析为字体偏好，无法识别时返回 null。
   WorkspaceFontPreference? _font(String? value) => switch (value) {
-    'inter' => WorkspaceFontPreference.inter,
+    // Historical unbundled families migrate to the reliable system font.
+    'fluent' || 'segoeUi' || 'inter' => WorkspaceFontPreference.system,
     'notoSans' => WorkspaceFontPreference.notoSans,
     'system' => WorkspaceFontPreference.system,
     _ => null,
   };
 
-  /// 解析自定义快捷键 JSON，损坏时返回 null。
-  ShortcutBinding? _customShortcut(String? value) {
-    if (value == null) return null;
-    try {
-      return ShortcutBinding.fromJson(
-        Map<String, dynamic>.from(jsonDecode(value) as Map),
-      );
-    } on Object {
-      return null;
-    }
-  }
+  CodeFontPreference? _codeFont(String? value) => switch (value) {
+    'jetBrainsMono' => CodeFontPreference.jetBrainsMono,
+    'sourceCodePro' => CodeFontPreference.system,
+    'system' => CodeFontPreference.system,
+    _ => null,
+  };
 }

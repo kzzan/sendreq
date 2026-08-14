@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import '../../domain/api_assets/api_asset_models.dart';
-import 'in_memory_api_asset_repository.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
 
 /// API 资产快照的稳定 JSON 格式。
 ///

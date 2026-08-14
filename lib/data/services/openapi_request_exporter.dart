@@ -1,10 +1,11 @@
 import 'dart:convert';
 
-import '../../domain/api_assets/api_asset_models.dart';
-import '../../domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/api_assets/openapi_exchange.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
 
 /// 将工作区中的 HTTP 请求导出为 OpenAPI 3.0 JSON 文档。
-class OpenApiRequestExporter {
+class OpenApiRequestExporter implements OpenApiExportPort {
   /// 创建 OpenAPI 请求导出器。
   const OpenApiRequestExporter();
 
@@ -18,6 +19,10 @@ class OpenApiRequestExporter {
   }) => const JsonEncoder.withIndent(
     '  ',
   ).convert(toJson(requests: requests, title: title));
+
+  @override
+  String serialize(OpenApiExportSnapshot snapshot) =>
+      export(requests: snapshot.requests, title: snapshot.title);
 
   /// 生成可供测试或进一步处理的 OpenAPI JSON 对象。
   Map<String, Object?> toJson({
@@ -94,12 +99,10 @@ class OpenApiRequestExporter {
       if (request.authentication.type != RequestAuthenticationType.none)
         'security': [_securityRequirement(request.authentication)],
       if (parameters.isNotEmpty) 'parameters': parameters,
-      if (request.bodyTemplate.trim().isNotEmpty)
+      if (_hasRequestBody(request, contentType))
         'requestBody': {
           'content': {
-            contentType: {
-              'example': _bodyExample(request.bodyTemplate, contentType),
-            },
+            contentType: {'example': _requestBodyExample(request, contentType)},
           },
         },
       'responses': {
@@ -178,7 +181,42 @@ class OpenApiRequestExporter {
     return 'application/json';
   }
 
-  /// 将请求体按内容类型转为示例对象；JSON 优先解析为结构化值。
+  bool _hasRequestBody(ApiRequestDefinition request, String contentType) {
+    final normalizedType = contentType.toLowerCase();
+    // 两类结构化表单的实际发送内容只来自字段列表，不能把切换类型前保留
+    // 的 raw 草稿误导出为表单示例。
+    if (normalizedType.startsWith('application/x-www-form-urlencoded')) {
+      return request.formUrlEncodedFields.any(_isExportableField);
+    }
+    if (normalizedType.startsWith('multipart/form-data')) {
+      return request.multipartFields.any(_isExportableField);
+    }
+    return request.bodyTemplate.trim().isNotEmpty;
+  }
+
+  /// 将请求正文按类型转换为 OpenAPI 示例；本地 multipart 文件永不导出。
+  Object _requestBodyExample(ApiRequestDefinition request, String contentType) {
+    if (contentType.toLowerCase().startsWith(
+      'application/x-www-form-urlencoded',
+    )) {
+      return _formExample(request.formUrlEncodedFields);
+    }
+    if (contentType.toLowerCase().startsWith('multipart/form-data')) {
+      return _formExample(request.multipartFields);
+    }
+    return _bodyExample(request.bodyTemplate, contentType);
+  }
+
+  Map<String, String> _formExample(Iterable<ApiField> fields) => {
+    for (final field in fields)
+      if (_isExportableField(field) && !field.secretReference)
+        field.key: field.value,
+  };
+
+  bool _isExportableField(ApiField field) =>
+      field.enabled && field.key.trim().isNotEmpty;
+
+  /// 将原始请求体按内容类型转为示例对象；JSON 优先解析为结构化值。
   Object _bodyExample(String body, String contentType) {
     if (contentType.toLowerCase().contains('json')) {
       try {

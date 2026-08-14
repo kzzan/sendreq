@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
 import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+import 'package:sendreq/domain/grpc/grpc_rpc_shape.dart';
 
 void main() {
   // 验证请求定义的序列化往返：经 encodeJson/decodeJson 后稳定字段保持一致，
@@ -13,9 +15,102 @@ void main() {
 
     expect(restored.id, original.id);
     expect(restored.method, 'POST');
-    expect(restored.urlTemplate, 'http://127.0.0.1:8081/api/v1/users');
+    expect(restored.urlTemplate, 'http://127.0.0.1:8081/api/v1/basic/users');
     expect(restored.bodyTemplate, original.bodyTemplate);
     expect(restored.protocol, ApiRequestProtocol.http);
+  });
+
+  test('request definitions preserve URL encoded field state through JSON', () {
+    const original = ApiRequestDefinition(
+      id: 'form-request',
+      collectionId: 'collection',
+      folderId: 'folder',
+      name: 'Form request',
+      method: 'POST',
+      urlTemplate: 'https://api.example.test/session',
+      queryParams: [],
+      headers: [
+        ApiField(
+          key: 'Content-Type',
+          value: 'application/x-www-form-urlencoded',
+        ),
+      ],
+      bodyTemplate: 'legacy raw body',
+      formUrlEncodedFields: [
+        ApiField(key: 'email', value: '{{email}}', secretReference: true),
+        ApiField(key: 'mode', value: 'preview', enabled: false),
+      ],
+    );
+
+    final restored = ApiRequestDefinition.decodeJson(original.encodeJson());
+
+    expect(restored.formUrlEncodedFields, hasLength(2));
+    expect(restored.formUrlEncodedFields.first.secretReference, isTrue);
+    expect(restored.formUrlEncodedFields.last.enabled, isFalse);
+    expect(restored.formUrlEncodedFields.last.value, 'preview');
+  });
+
+  test('gRPC shape and schema source survive request JSON round trips', () {
+    for (final shape in GrpcRpcShape.values) {
+      const base = ApiRequestDefinition(
+        id: 'grpc',
+        collectionId: 'collection',
+        folderId: 'folder',
+        name: 'gRPC request',
+        method: 'POST',
+        urlTemplate: 'grpc://127.0.0.1:50051',
+        queryParams: [],
+        headers: [],
+        bodyTemplate: '{}',
+        protocol: ApiRequestProtocol.grpc,
+      );
+      final original = base.copyWith(
+        grpc: GrpcRequestConfiguration(
+          serviceName: '.order.v1.OrderService',
+          methodName: 'Chat',
+          useTls: false,
+          rpcShape: shape,
+          deadlineMs: '2500',
+          schemaSource: GrpcSchemaSource.reflection,
+        ),
+      );
+
+      final restored = ApiRequestDefinition.decodeJson(original.encodeJson());
+
+      expect(restored.grpc.rpcShape, shape);
+      expect(restored.grpc.schemaSource, GrpcSchemaSource.reflection);
+      expect(restored.grpc.deadlineMs, '2500');
+    }
+  });
+
+  test('legacy gRPC fields migrate and missing auth remains No auth', () {
+    final legacy = <String, dynamic>{
+      'id': 'legacy-grpc',
+      'collectionId': 'collection',
+      'folderId': 'folder',
+      'name': 'Legacy stream',
+      'method': 'POST',
+      'urlTemplate': 'grpc://127.0.0.1:50051',
+      'queryParams': <dynamic>[],
+      'headers': <dynamic>[],
+      'bodyTemplate': '{}',
+      'protocol': 'grpc',
+      'grpc': <String, dynamic>{
+        'serviceName': '.order.v1.OrderService',
+        'methodName': 'WatchOrders',
+        'useTls': false,
+        'serverStreaming': true,
+        'useReflection': true,
+      },
+      'metadata': <String, String>{},
+    };
+
+    final restored = ApiRequestDefinition.fromJson(legacy);
+
+    expect(restored.authentication.type, RequestAuthenticationType.none);
+    expect(restored.grpc.rpcShape, GrpcRpcShape.serverStreaming);
+    expect(restored.grpc.schemaSource, GrpcSchemaSource.reflection);
+    expect(restored.grpc.deadlineMs, isEmpty);
   });
 
   test(
@@ -54,6 +149,7 @@ void main() {
           serviceName: '.sendreq.health.Health',
           methodName: 'Check',
           useTls: false,
+          deadlineMs: '2500',
         ),
       );
       final restoredGrpc = ApiRequestDefinition.decodeJson(
@@ -72,6 +168,7 @@ void main() {
       expect(restoredGrpc.grpc.serviceName, '.sendreq.health.Health');
       expect(restoredGrpc.grpc.methodName, 'Check');
       expect(restoredGrpc.grpc.useTls, isFalse);
+      expect(restoredGrpc.grpc.deadlineMs, '2500');
     },
   );
 
@@ -104,7 +201,8 @@ void main() {
     expect(request.name, 'New request 1');
     expect(request.folderId, 'folder-demo-rest');
     expect(repository.getRequest(request.id).urlTemplate, isEmpty);
-    expect(repository.listRequests(), hasLength(8));
+    expect(request.authentication.type, RequestAuthenticationType.none);
+    expect(repository.listRequests(), hasLength(16));
   });
 
   test('Demo REST request keeps its localhost endpoint and query input', () {
@@ -152,9 +250,10 @@ void main() {
     );
 
     final collection = repository.listCollections().single;
+    expect(collection.id, 'collection-sendreq-demo');
     expect(collection.name, 'Protocol APIs');
     expect(collection.folders.first.name, 'Auth');
-    expect(folder.name, 'New folder 4');
+    expect(folder.name, 'New group 4');
     expect(request.folderId, folder.id);
     expect(collection.folders.last.requests.single.id, request.id);
   });
@@ -219,7 +318,13 @@ void main() {
       throwsStateError,
     );
     expect(repository.getRequest('demo-rest-list-users').name, 'List users');
-    expect(repository.listRequests(), hasLength(6));
+    final collection = repository.listCollections().single;
+    expect(collection.id, 'collection-sendreq-demo');
+    expect(
+      collection.folders.map((folder) => folder.id),
+      contains('folder-demo-rest'),
+    );
+    expect(repository.listRequests(), hasLength(14));
     expect(repository.activeRequestId, 'demo-rest-list-users');
   });
 
@@ -238,4 +343,29 @@ void main() {
       expect(request.folderId, 'folder-new-1-requests');
     },
   );
+
+  test('asset snapshots are reused until repository data changes', () {
+    final repository = InMemoryApiAssetRepository.demo();
+
+    final collections = repository.listCollections();
+    final requests = repository.listRequests();
+    expect(repository.listCollections(), same(collections));
+    expect(repository.listRequests(), same(requests));
+
+    repository.openRequestTab('demo-rest-create-user');
+    expect(repository.listCollections(), same(collections));
+    expect(repository.listRequests(), same(requests));
+
+    repository.renameRequest('demo-rest-create-user', 'Create user fast');
+    final changedCollections = repository.listCollections();
+    final changedRequests = repository.listRequests();
+    expect(changedCollections, isNot(same(collections)));
+    expect(changedRequests, isNot(same(requests)));
+    expect(
+      repository.getRequest('demo-rest-create-user').name,
+      'Create user fast',
+    );
+    expect(repository.listCollections(), same(changedCollections));
+    expect(repository.listRequests(), same(changedRequests));
+  });
 }

@@ -1,9 +1,28 @@
 import 'dart:io';
-
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 
-import 'protobuf_descriptor_set.dart';
+import 'package:sendreq/domain/module_boundaries/module_ports.dart';
+
+/// 桌面和 Flutter asset 的 Protobuf schema adapter。
+class LocalProtobufSourcePort implements ProtobufSourcePort {
+  const LocalProtobufSourcePort();
+
+  @override
+  bool exists(String path) =>
+      path.startsWith('asset://') || File(path).existsSync();
+
+  @override
+  ProtobufDescriptorSet parseDescriptorSet(Uint8List bytes) =>
+      ProtobufDescriptorSet.parse(bytes);
+
+  @override
+  Future<Uint8List> readBytes(String path) => File(path).readAsBytes();
+
+  @override
+  Future<ProtobufDescriptorSet> parseSourceFile(String path) =>
+      const ProtoSourceParser().parseFile(path);
+}
 
 /// 解析本地 `.proto` 源文件及其 import 图，产出供 gRPC 使用的动态描述。
 class ProtoSourceParser {
@@ -79,7 +98,18 @@ class ProtoSourceParser {
           oneofs.add(oneof.name);
           fields.addAll(_fields(oneof.body, prefix: prefix, oneofIndex: index));
         }
-        fields.addAll(_fields(declaration.body, prefix: prefix));
+        // map 语法被编译为内部的 repeated entry 消息。构建
+        // 相同的描述符结构，以便动态编解码器能编码 map。
+        for (final mapField in _mapFields(
+          declaration.body,
+          prefix: qualified,
+        )) {
+          messages[mapField.entry.name] = mapField.entry;
+          fields.add(mapField.field);
+        }
+        fields.addAll(
+          _fields(_withoutBlocks(declaration.body, 'oneof'), prefix: prefix),
+        );
         messages[qualified] = ProtobufMessageDescriptor(
           name: qualified,
           fields: fields,
@@ -127,9 +157,33 @@ class ProtoSourceParser {
         'No messages or services found in proto source.',
       );
     }
+    // 源码解析最初将所有具名类型视为消息。读取完整
+    // import 图后，再修正引用枚举的字段。
+    final normalizedMessages = <String, ProtobufMessageDescriptor>{
+      for (final entry in messages.entries)
+        entry.key: ProtobufMessageDescriptor(
+          name: entry.value.name,
+          oneofs: entry.value.oneofs,
+          mapEntry: entry.value.mapEntry,
+          fields: [
+            for (final field in entry.value.fields)
+              ProtobufFieldDescriptor(
+                name: field.name,
+                number: field.number,
+                type: field.type == 11 && enums.containsKey(field.typeName)
+                    ? 14
+                    : field.type,
+                repeated: field.repeated,
+                typeName: field.typeName,
+                oneofIndex: field.oneofIndex,
+                mapEntry: field.mapEntry,
+              ),
+          ],
+        ),
+    };
     return ProtobufDescriptorSet(
-      messageTypes: messages.keys.toList()..sort(),
-      messages: Map.unmodifiable(messages),
+      messageTypes: normalizedMessages.keys.toList()..sort(),
+      messages: Map.unmodifiable(normalizedMessages),
       enumTypes: Map.unmodifiable(enums),
       services: Map.unmodifiable(services),
     );
@@ -152,9 +206,9 @@ class ProtoSourceParser {
           number: int.parse(match.group(4)!),
           type: _fieldType(match.group(2)!),
           repeated: match.group(1) != null,
-          // Source-level names are relative to the file package unless they
-          // start with a dot. The codec only accepts descriptor-level fully
-          // qualified names, so resolve them while the package is available.
+          // 源码级名称相对于文件所属 package，除非它们
+          // 以点开头。编解码器只接受描述符级完全限定名，
+          // 因此要在 package 可用时解析它们。
           typeName: _isScalar(match.group(2)!)
               ? null
               : _qualified(prefix, match.group(2)!),
@@ -164,6 +218,55 @@ class ProtoSourceParser {
     }
     return fields;
   }
+
+  List<_SourceMapField> _mapFields(String source, {required String prefix}) {
+    final fields = <_SourceMapField>[];
+    final expression = RegExp(
+      r'\bmap\s*<\s*([.\w]+)\s*,\s*([.\w]+)\s*>\s+(\w+)\s*=\s*(\d+)\s*;',
+    );
+    for (final match in expression.allMatches(source)) {
+      final fieldName = match.group(3)!;
+      final entryName =
+          '${fieldName[0].toUpperCase()}${fieldName.substring(1)}Entry';
+      final entryType = '$prefix.$entryName';
+      final keyType = match.group(1)!;
+      final valueType = match.group(2)!;
+      fields.add(
+        _SourceMapField(
+          field: ProtobufFieldDescriptor(
+            name: fieldName,
+            number: int.parse(match.group(4)!),
+            type: 11,
+            repeated: true,
+            typeName: entryType,
+            mapEntry: true,
+          ),
+          entry: ProtobufMessageDescriptor(
+            name: entryType,
+            mapEntry: true,
+            fields: [
+              _mapEntryField('key', 1, keyType, prefix),
+              _mapEntryField('value', 2, valueType, prefix),
+            ],
+          ),
+        ),
+      );
+    }
+    return fields;
+  }
+
+  ProtobufFieldDescriptor _mapEntryField(
+    String name,
+    int number,
+    String type,
+    String prefix,
+  ) => ProtobufFieldDescriptor(
+    name: name,
+    number: number,
+    type: _fieldType(type),
+    repeated: false,
+    typeName: _isScalar(type) ? null : _qualified(prefix, type),
+  );
 
   /// 将 proto 类型名映射为 protobuf 字段类型编号。
   int _fieldType(String value) => switch (value) {
@@ -205,6 +308,13 @@ class ProtoSourceParser {
   String _normalizePath(String value) => path.normalize(value);
 }
 
+class _SourceMapField {
+  const _SourceMapField({required this.field, required this.entry});
+
+  final ProtobufFieldDescriptor field;
+  final ProtobufMessageDescriptor entry;
+}
+
 /// 一次声明块（message/enum/service）的名称与正文。
 class _ProtoBlock {
   /// 创建声明块。
@@ -237,4 +347,23 @@ List<_ProtoBlock> _blocks(String source, String keyword) {
     }
   }
   return output;
+}
+
+String _withoutBlocks(String source, String keyword) {
+  final expression = RegExp('\\b$keyword\\s+\\w+\\s*\\{');
+  final output = StringBuffer();
+  var cursor = 0;
+  for (final match in expression.allMatches(source)) {
+    output.write(source.substring(cursor, match.start));
+    var depth = 1;
+    var index = match.end;
+    while (index < source.length && depth > 0) {
+      if (source[index] == '{') depth++;
+      if (source[index] == '}') depth--;
+      index++;
+    }
+    cursor = index;
+  }
+  output.write(source.substring(cursor));
+  return output.toString();
 }

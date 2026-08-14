@@ -1,24 +1,162 @@
+// sendreq 的本地订单服务使用这个自包含 schema 验证典型 Protobuf 类型。
 syntax = "proto3";
 
 package order.v1;
 
+// 生成 Go 代码的目标包（模块 go-grpc 下的 gen/order/v1）。
+option go_package = "sendreq.local/go-grpc/gen/order/v1;orderv1";
+
+// 订单优先级用于验证 enum 字段。
+enum OrderPriority {
+  ORDER_PRIORITY_UNSPECIFIED = 0;
+  ORDER_PRIORITY_LOW = 1;
+  ORDER_PRIORITY_NORMAL = 2;
+  ORDER_PRIORITY_HIGH = 3;
+  ORDER_PRIORITY_CRITICAL = 4;
+}
+
+// 金额使用整数单位，避免示例中引入浮点精度问题。
+message Money {
+  string currency_code = 1;
+  int64 units = 2;
+  int32 nanos = 3;
+}
+
+message Contact {
+  string email = 1;
+  string phone = 2;
+}
+
+message Address {
+  string line1 = 1;
+  string city = 2;
+  string region = 3;
+  string postal_code = 4;
+  string country_code = 5;
+}
+
+message Customer {
+  string customer_id = 1;
+  Contact contact = 2;
+  repeated string tags = 3;
+  map<string, string> attributes = 4;
+}
+
+message OrderItem {
+  string sku = 1;
+  string name = 2;
+  int32 quantity = 3;
+  Money unit_price = 4;
+  repeated string labels = 5;
+}
+
+message CardPayment {
+  string last_four = 1;
+  string authorization_id = 2;
+}
+
+message BankTransferPayment {
+  string bank_reference = 1;
+}
+
+// 订单实体同时包含 enum、嵌套消息、repeated、map 和 two oneof groups。
 message Order {
   string order_id = 1;
   string user_id = 2;
   string product = 3;
   int32 quantity = 4;
+  OrderPriority priority = 5;
+  Customer customer = 6;
+  repeated OrderItem items = 7;
+  map<string, string> attributes = 8;
+  Money total = 9;
+  oneof fulfilment {
+    Address shipping_address = 10;
+    string pickup_location = 11;
+  }
+  oneof payment {
+    CardPayment card_payment = 12;
+    BankTransferPayment bank_transfer_payment = 13;
+  }
 }
 
+// 创建订单请求。
 message CreateOrderRequest {
   string user_id = 1;
   string product = 2;
   int32 quantity = 3;
+  OrderPriority priority = 4;
+  Customer customer = 5;
+  repeated OrderItem items = 6;
+  map<string, string> attributes = 7;
+  oneof fulfilment {
+    Address shipping_address = 8;
+    string pickup_location = 9;
+  }
 }
 
+// 创建订单响应。
 message CreateOrderResponse {
   Order order = 1;
 }
 
+// API Key 保护的一元读取请求。
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}
+
+// 客户端流提交完成后的确定性汇总结果。
+message SubmitOrdersResponse {
+  int32 accepted_count = 1;
+  int32 total_quantity = 2;
+}
+
+// 双向订单协作消息。
+message OrderChatMessage {
+  string sender = 1;
+  string text = 2;
+  int64 sequence = 3;
+  map<string, string> attributes = 4;
+  oneof payload {
+    string text_payload = 5;
+    bytes binary_payload = 6;
+  }
+}
+
+// 订阅订单事件的请求。
+message WatchOrdersRequest {
+  string user_id = 1;
+  int32 limit = 2;
+}
+
+// 服务端按确定顺序下发的订单事件。
+message OrderEvent {
+  string order_id = 1;
+  string user_id = 2;
+  string status = 3;
+  int64 sequence = 4;
+  OrderPriority priority = 5;
+  map<string, string> attributes = 6;
+}
+
+// 订单服务。
 service OrderService {
+  // API Key 读取订单；不存在的订单返回确定性示例，便于独立验收。
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+
+  // 创建订单并返回落库后的订单。
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+
+  // 客户端连续提交订单，半关闭后返回接收汇总。
+  rpc SubmitOrders(stream CreateOrderRequest) returns (SubmitOrdersResponse);
+
+  // 双向流示例：客户端每发送一条消息，服务端立即回传确认消息。
+  rpc Chat(stream OrderChatMessage) returns (stream OrderChatMessage);
+
+  // 服务端流示例：依次返回有限的订单状态事件。
+  rpc WatchOrders(WatchOrdersRequest) returns (stream OrderEvent);
 }

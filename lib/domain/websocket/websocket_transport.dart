@@ -1,5 +1,8 @@
 import 'dart:typed_data';
 
+import 'package:sendreq/domain/request_runtime/long_lived_session_context.dart';
+import 'package:sendreq/domain/module_boundaries/boundary_models.dart';
+
 /// WebSocket 连接的生命周期状态机。
 enum WebSocketConnectionState {
   /// 尚未建立连接或连接已正常断开。
@@ -54,8 +57,10 @@ class WebSocketConnectionConfiguration {
     required this.url,
     this.headers = const {},
     this.subprotocols = const [],
+    this.redactionPolicy,
     this.redactedValues = const [],
     this.redactedEndpoint,
+    this.sessionContext = const LongLivedSessionContext.unbound(),
   });
 
   /// 目标 WebSocket 地址（ws:// 或 wss://）。
@@ -67,11 +72,17 @@ class WebSocketConnectionConfiguration {
   /// 客户端声明的子协议列表。
   final List<String> subprotocols;
 
-  /// 需要在记录与展示时被掩码脱敏的敏感值列表。
+  /// 由 Environment 持有的策略，在脱敏时不暴露敏感值。
+  final RedactionPolicy? redactionPolicy;
+
+  /// 遗留兼容输入。新调用方使用 [redactionPolicy]。
   final List<String> redactedValues;
 
   /// 已脱敏的端点展示值；为空时由 session registry 依据 [redactedValues] 生成。
   final String? redactedEndpoint;
+
+  /// 建立握手时的环境与认证展示快照，不包含凭据值。
+  final LongLivedSessionContext sessionContext;
 }
 
 /// 一次连接过程中产生的传输事件，统一封装文本、二进制与系统事件。

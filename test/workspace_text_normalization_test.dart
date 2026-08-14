@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
-import 'package:sendreq/features/workspace/view_models/workspace_view_model.dart';
+import 'package:sendreq/ui/shell/view_models/workspace_view_model.dart';
 
 import 'support/workspace_view_model_test_factory.dart';
 

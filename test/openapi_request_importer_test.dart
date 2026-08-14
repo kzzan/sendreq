@@ -33,4 +33,42 @@ void main() {
       throwsA(isA<OpenApiImportException>()),
     );
   });
+
+  test('imports URL encoded and multipart text field examples', () {
+    const source = '''{
+      "openapi":"3.0.3",
+      "paths":{
+        "/session":{"post":{"requestBody":{"content":{
+          "application/x-www-form-urlencoded":{"example":{"email":"mary@example.test","scope":"read"}},
+          "multipart/form-data":{"example":{"title":"Profile","visibility":"private"}}
+        }}}}
+      }
+    }''';
+
+    final urlEncoded = const OpenApiRequestImporter().parse(source).single;
+    expect(
+      urlEncoded.headers.single.value,
+      'application/x-www-form-urlencoded',
+    );
+    expect(
+      urlEncoded.formUrlEncodedFields.map((field) => (field.key, field.value)),
+      [('email', 'mary@example.test'), ('scope', 'read')],
+    );
+    expect(urlEncoded.multipartFields, isEmpty);
+
+    const multipartOnly = '''{
+      "openapi":"3.0.3",
+      "paths":{"/upload":{"post":{"requestBody":{"content":{
+        "multipart/form-data":{"examples":{"default":{"value":{"title":"Profile","visibility":"private"}}}}
+      }}}}}
+    }''';
+    final multipart = const OpenApiRequestImporter()
+        .parse(multipartOnly)
+        .single;
+    expect(multipart.headers.single.value, 'multipart/form-data');
+    expect(multipart.multipartFields.map((field) => (field.key, field.value)), [
+      ('title', 'Profile'),
+      ('visibility', 'private'),
+    ]);
+  });
 }

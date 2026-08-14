@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
 import 'package:sendreq/domain/websocket/websocket_session_registry.dart';
 import 'package:sendreq/domain/websocket/websocket_transport.dart';
+import 'package:sendreq/domain/request_runtime/long_lived_session_context.dart';
+import 'package:sendreq/domain/module_boundaries/boundary_models.dart';
 
 void main() {
   // 端到端验证会话注册中心：连接建立（含子协议、请求头与脱敏规则配置）、
@@ -19,7 +22,7 @@ void main() {
         url: Uri.parse('wss://socket.sendreq.io/events'),
         headers: const {'Authorization': 'Bearer token-value'},
         subprotocols: const ['events.v1'],
-        redactedValues: const ['token-value'],
+        redactionPolicy: RedactionPolicy(const ['token-value']),
       ),
     );
     // 注入一条含密钥明文的入站帧，验证会话记录时被脱敏。
@@ -150,12 +153,17 @@ void main() {
       ),
     );
 
-    connection.emit(const WebSocketTransportEvent.closed('Normal close'));
-    await Future<void>.delayed(Duration.zero);
-    expect(
-      registry.sessionFor('stream').state,
-      WebSocketConnectionState.disconnected,
+    connection.emit(
+      const WebSocketTransportEvent.closed(
+        'Closed (1000): service requested close token-value',
+      ),
     );
+    await Future<void>.delayed(Duration.zero);
+    final closedSession = registry.sessionFor('stream');
+    expect(closedSession.state, WebSocketConnectionState.disconnected);
+    expect(closedSession.events.last.kind, WebSocketFrameKind.close);
+    expect(closedSession.events.last.preview, contains('Closed (1000)'));
+    expect(closedSession.events.last.preview, isNot(contains('token-value')));
 
     await registry.connect(
       requestId: 'stream',
@@ -291,6 +299,37 @@ void main() {
       pendingConnection.complete(connection);
       await Future<void>.delayed(Duration.zero);
       expect(connection.closed, isTrue);
+    },
+  );
+
+  test(
+    'keeps a sanitized session context and marks configuration changes',
+    () async {
+      final registry = WebSocketSessionRegistry(
+        _FakeTransport(_FakeConnection()),
+      );
+      await registry.connect(
+        requestId: 'stream',
+        configuration: WebSocketConnectionConfiguration(
+          url: Uri.parse('ws://localhost/events'),
+          sessionContext: const LongLivedSessionContext(
+            environmentName: 'Local Protocol',
+            authenticationLabel: 'Environment Bearer token',
+            authenticationType: RequestAuthenticationType.bearer,
+            authenticationSource: RequestAuthenticationSource.environment,
+          ),
+        ),
+      );
+
+      registry.markConfigurationChanged('stream');
+
+      final session = registry.sessionFor('stream');
+      expect(session.sessionContext.environmentName, 'Local Protocol');
+      expect(
+        session.sessionContext.authenticationLabel,
+        'Environment Bearer token',
+      );
+      expect(session.requiresReconnect, isTrue);
     },
   );
 }

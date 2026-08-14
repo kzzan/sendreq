@@ -3,8 +3,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../../domain/models/workspace_models.dart';
-import '../../domain/request_runtime/request_execution_runtime.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
+import 'package:sendreq/domain/request_runtime/form_url_encoding.dart';
+import 'package:sendreq/domain/request_runtime/request_execution_runtime.dart';
 
 /// 基于 package:http 的真实请求执行运行时，负责把请求草稿发送到网络。
 class HttpRequestExecutionRuntime implements RequestExecutionRuntime {
@@ -92,18 +93,25 @@ class HttpRequestExecutionRuntime implements RequestExecutionRuntime {
     if (!_usesMultipart(draft) || !supportsBody) {
       final request = http.Request(draft.method, uri);
       _copyHeaders(draft, request, omitEntityHeaders: !supportsBody);
-      if (supportsBody && draft.body.isNotEmpty) request.body = draft.body;
+      if (supportsBody) {
+        request.body = _usesUrlEncodedForm(draft)
+            ? encodeFormUrlFields(draft.formUrlEncodedFields)
+            : draft.body;
+      }
       return request;
     }
 
     final request = http.MultipartRequest(draft.method, uri);
-    // MultipartRequest owns the boundary-bearing Content-Type header.
+    // MultipartRequest 自行拥有携带 boundary 的 Content-Type 头。
     _copyHeaders(draft, request, omitEntityHeaders: true);
-    // 只收集启用的表单字段，写入 multipart 的普通字段部分。
+    // MultipartRequest.fields 是单值 Map，无法保留同名文本字段。将每个
+    // 字段作为无文件名的 multipart part 写入 files，保证顺序和重复字段语义。
     for (final field in draft.multipartFields.where(
       (item) => item.enabled && item.keyName.trim().isNotEmpty,
     )) {
-      request.fields[field.keyName] = field.value;
+      request.files.add(
+        http.MultipartFile.fromString(field.keyName, field.value),
+      );
     }
     // 为每个启用的文件校验字段名与路径后，追加为 multipart 的文件部分。
     for (final file in draft.multipartFiles.where((item) => item.enabled)) {
@@ -174,6 +182,15 @@ class HttpRequestExecutionRuntime implements RequestExecutionRuntime {
         header.enabled &&
         header.keyName.toLowerCase() == 'content-type' &&
         header.value.toLowerCase().startsWith('multipart/form-data'),
+  );
+
+  bool _usesUrlEncodedForm(RequestDraft draft) => draft.headers.any(
+    (header) =>
+        header.enabled &&
+        header.keyName.toLowerCase() == 'content-type' &&
+        header.value.toLowerCase().startsWith(
+          'application/x-www-form-urlencoded',
+        ),
   );
 
   /// GET 与 HEAD 之外的请求方法允许携带请求体。

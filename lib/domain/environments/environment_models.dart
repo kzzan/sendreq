@@ -1,4 +1,4 @@
-import '../authentication/request_authentication.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
 
 /// 环境变量值类型。
 enum EnvironmentVariableType {

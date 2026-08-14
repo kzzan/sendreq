@@ -1,5 +1,5 @@
-import '../../domain/models/workspace_models.dart';
-import '../../domain/request_runtime/request_execution_runtime.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
+import 'package:sendreq/domain/request_runtime/request_execution_runtime.dart';
 
 /// 演示用的请求执行运行时：不发送真实网络请求，仅返回固定结构的模拟响应。
 class DemoRequestExecutionRuntime implements RequestExecutionRuntime {
@@ -29,7 +29,7 @@ class DemoRequestExecutionRuntime implements RequestExecutionRuntime {
             '''
 {
   "ok": true,
-  "fixture": "sendreq.desktop",
+  "demo": "sendreq.desktop",
   "method": "${draft.method}",
   "url": "$resolvedUrl",
   "items": [
@@ -39,7 +39,7 @@ class DemoRequestExecutionRuntime implements RequestExecutionRuntime {
 }''',
         headers: const [
           KeyValueRow(keyName: 'content-type', value: 'application/json'),
-          KeyValueRow(keyName: 'x-sendreq-trace', value: 'fixture-transport'),
+          KeyValueRow(keyName: 'x-sendreq-trace', value: 'demo-transport'),
         ],
       ),
     );

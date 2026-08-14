@@ -1,4 +1,4 @@
-import '../api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
 
 /// API 资产（集合、文件夹、请求）与请求选项卡的领域仓储契约。
 abstract interface class ApiAssetRepository {
@@ -12,7 +12,11 @@ abstract interface class ApiAssetRepository {
 
   ApiFolder createFolder({required String collectionId});
 
-  ApiRequestDefinition createRequest({String? collectionId, String? folderId});
+  ApiRequestDefinition createRequest({
+    String? collectionId,
+    String? folderId,
+    ApiRequestProtocol protocol = ApiRequestProtocol.http,
+  });
 
   ApiCollection addCollection(ApiCollection collection);
 
@@ -45,4 +49,7 @@ abstract interface class ApiAssetRepository {
   void activateRequestTab(String tabId);
 
   void closeRequestTab(String tabId);
+
+  /// Waits until every queued repository mutation is durably persisted.
+  Future<void> flush();
 }

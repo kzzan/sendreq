@@ -3,21 +3,98 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sendreq/data/repositories/in_memory_user_notice_repository.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
 import 'package:sendreq/data/repositories/in_memory_environment_store.dart';
 import 'package:sendreq/domain/api_assets/api_asset_models.dart';
 import 'package:sendreq/domain/authentication/request_authentication.dart';
 import 'package:sendreq/domain/grpc/grpc_transport.dart';
-import 'package:sendreq/domain/models/workspace_models.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
+import 'package:sendreq/domain/module_boundaries/boundary_models.dart';
+import 'package:sendreq/domain/module_boundaries/module_ports.dart';
 import 'package:sendreq/domain/request_runtime/request_execution_runtime.dart';
 import 'package:sendreq/domain/websocket/websocket_transport.dart';
-import 'package:sendreq/features/workspace/view_models/workspace_view_model.dart';
+import 'package:sendreq/ui/shell/view_models/workspace_view_model.dart';
+import 'package:sendreq/ui/shell/models/workspace_shell_models.dart';
 
 import 'support/workspace_view_model_test_factory.dart';
+import 'support/module_boundary_fakes.dart';
+
+const _grpcFlowProto = '''
+syntax = "proto3";
+package sendreq;
+message FlowMessage { string value = 1; }
+service Flow {
+  rpc Unary (FlowMessage) returns (FlowMessage);
+  rpc Client (stream FlowMessage) returns (FlowMessage);
+  rpc Server (FlowMessage) returns (stream FlowMessage);
+  rpc Bidi (stream FlowMessage) returns (stream FlowMessage);
+}
+''';
 
 // WorkspaceViewModel 的状态机单元测试：不依赖真实运行时与 UI，
 // 覆盖发送/取消、删除保护、草稿编辑与授权/上传等数据行为。
 void main() {
+  test('request working views are transient and default new protocol', () {
+    final viewModel = workspaceViewModel();
+    addTearDown(viewModel.dispose);
+    final initialRequestId = viewModel.activeRequest.id;
+
+    viewModel.selectRequestWorkingView(RequestWorkingView.grpc);
+
+    expect(viewModel.requestWorkingView, RequestWorkingView.grpc);
+    expect(viewModel.activeRequest.id, initialRequestId);
+    expect(viewModel.grpcCalls, isEmpty);
+    expect(viewModel.webSocketSessions, isEmpty);
+
+    viewModel.createRequest();
+
+    expect(viewModel.activeDraft.protocol, ApiRequestProtocol.grpc);
+    expect(viewModel.requestWorkingView, RequestWorkingView.grpc);
+  });
+
+  test(
+    'restores and acknowledges durable notices through Workspace startup',
+    () async {
+      final repository = InMemoryUserNoticeRepository();
+      await repository.upsertUnread(
+        PersistentUserNotice(
+          deduplicationKey: 'outcome:mockServer.startFailed:mockServer:mock-1',
+          code: 'mockServer.startFailed',
+          severity: DurableNoticeSeverity.error,
+          createdAt: DateTime.utc(2026, 8, 11),
+          updatedAt: DateTime.utc(2026, 8, 11),
+          resourceRef: const ResourceRef(
+            kind: ResourceKind.mockServer,
+            id: 'mock-1',
+          ),
+          recovery: RecoveryCommand(
+            id: RecoveryCommandId.retryMockServerStart,
+            resourceRef: const ResourceRef(
+              kind: ResourceKind.mockServer,
+              id: 'mock-1',
+            ),
+          ),
+        ),
+      );
+      final viewModel = workspaceViewModel(userNoticeRepository: repository);
+      addTearDown(viewModel.dispose);
+
+      await Future<void>.delayed(Duration.zero);
+
+      expect(viewModel.notices, hasLength(1));
+      expect(
+        viewModel.notices.single.recovery!.id,
+        RecoveryCommandId.retryMockServerStart,
+      );
+      await viewModel.acknowledgeNotice(
+        viewModel.notices.single.deduplicationKey,
+      );
+      expect(viewModel.notices, isEmpty);
+      expect(await repository.listUnread(), isEmpty);
+    },
+  );
+
   // 场景：删除正在发送的请求时，应取消底层运行时并丢弃迟到的响应；
   // 用受控运行时手动完成响应，验证删除后结果不会污染当前视图。
   test(
@@ -43,31 +120,66 @@ void main() {
     },
   );
 
-  // 场景：已删除请求的历史与文档草稿入口应保持不可用，并提示原请求已被删除。
-  test(
-    'deleted history and documentation requests remain unavailable',
-    () async {
-      final repository = InMemoryApiAssetRepository.demo();
-      final viewModel = workspaceViewModel(
-        assetRepository: repository,
-        executionRuntime: _ImmediateRuntime(),
-      );
+  test('cancellation forwards the Environment-owned execution id', () async {
+    const executionId = 'environment-owned-execution';
+    final service = _PendingExecutionService();
+    final viewModel = workspaceViewModel(
+      environmentResolver: FakeEnvironmentResolver(
+        ResolvedExecutionCommand(
+          executionId: executionId,
+          requestRef: const RequestRef(id: 'demo-rest-list-users'),
+          payload: ExecutionPayload(
+            method: 'GET',
+            resolvedUrl: 'https://api.example.test/users',
+            draft: const RequestDraft(
+              method: 'GET',
+              baseUrlToken: 'https://api.example.test',
+              path: '/users',
+              params: [],
+              headers: [],
+              body: '',
+            ),
+          ),
+          sanitizedRequestSummary: 'GET api.example.test/users',
+          redactionPolicy: RedactionPolicy(const []),
+        ),
+      ),
+      executionService: service,
+    );
+    addTearDown(viewModel.dispose);
 
-      await viewModel.sendActiveRequest();
-      // 记录删除前生成的历史 ID，随后验证删除后打开该历史的行为。
-      final historyId = viewModel.history.first.id;
-      viewModel.createDocumentationDraft();
-      viewModel.deleteRequest('demo-rest-list-users');
+    final send = viewModel.sendActiveRequest();
+    await service.started.future;
+    viewModel.cancelActiveRequest();
 
-      viewModel.openHistoryRecord(historyId);
-      viewModel.openSelectedHistoryRequest();
-      expect(viewModel.lastActionMessage, 'The original request was deleted.');
+    expect(service.cancelledExecutionIds, [executionId]);
+    service.result.complete(
+      const SanitizedExecutionResult(
+        executionId: executionId,
+        requestRef: RequestRef(id: 'demo-rest-list-users'),
+        status: OperationOutcomeKind.cancelled,
+        summary: 'Cancelled',
+      ),
+    );
+    await send;
+  });
 
-      viewModel.tryDocumentationDraft();
-      expect(viewModel.lastActionMessage, 'The original request was deleted.');
-      expect(viewModel.canTryDocumentationDraft, isFalse);
-    },
-  );
+  test('response-derived Mock opens with predictable selection', () async {
+    final publishing = FakeContractPublishingService();
+    final viewModel = workspaceViewModel(
+      contractPublishingService: publishing,
+      executionRuntime: _ImmediateRuntime(),
+    );
+    addTearDown(viewModel.dispose);
+
+    await viewModel.sendActiveRequest();
+    viewModel.createMockServerFromResponse();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(viewModel.activeSection, WorkspaceSection.mock);
+    expect(viewModel.activeMockServerId, 'mock-1');
+    expect(publishing.mockSnapshots, hasLength(1));
+  });
 
   // 场景：查询参数允许重名，解析出的 URL 应保留重复键（如两个 tag）。
   test('query parameters retain duplicate keys in the resolved URL', () {
@@ -216,7 +328,6 @@ void main() {
       expect(viewModel.activeDraftUrl, draftUrl);
       expect(viewModel.response, isNull);
       expect(viewModel.executionError, isNull);
-      expect(viewModel.openedHistoryRecord, isNull);
       expect(
         viewModel.resolvedUrl,
         'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
@@ -227,10 +338,6 @@ void main() {
         'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
         'http://127.0.0.1:8081/api/v1/users?page=1&limit=20',
       ]);
-      expect(
-        viewModel.history.first.requestSnapshot!.environmentName,
-        'Production',
-      );
     },
   );
 
@@ -271,8 +378,7 @@ void main() {
             folderId: 'folder-demo-rest',
             name: 'Lookup $endpoint',
             method: 'GET',
-            urlTemplate:
-                '{{baseUrl}}/geoip/$endpoint?ip={{ip}}&lang={{lang}}',
+            urlTemplate: '{{baseUrl}}/geoip/$endpoint?ip={{ip}}&lang={{lang}}',
             queryParams: const [],
             headers: const [],
             bodyTemplate: '',
@@ -505,9 +611,9 @@ void main() {
   test(
     'custom authorization is never removed by bearer authentication controls',
     () {
-    final viewModel = workspaceViewModel(
-      assetRepository: InMemoryApiAssetRepository.demo(),
-    );
+      final viewModel = workspaceViewModel(
+        assetRepository: InMemoryApiAssetRepository.demo(),
+      );
 
       viewModel.addActiveDraftField(headers: true);
       viewModel.updateActiveDraftField(
@@ -536,21 +642,46 @@ void main() {
     expect(viewModel.usesJsonBody, isFalse);
   });
 
-  // WebSocket 会话绑定请求标签而非可见页面：切换到历史后仍接收服务端帧。
+  // WebSocket 会话绑定请求标签而非可见页面：切换页面后仍接收服务端帧。
   test(
-    'WebSocket stays connected and records frames while viewing history',
+    'WebSocket stays connected and records frames while viewing Settings',
     () async {
       final transport = _TestWebSocketTransport();
       final viewModel = _webSocketViewModel(transport);
       await viewModel.connectActiveWebSocket();
 
-      viewModel.selectSection(WorkspaceSection.history);
+      viewModel.selectSection(WorkspaceSection.settings);
       transport.connection.emit(const WebSocketTransportEvent.text('update'));
       await Future<void>.delayed(Duration.zero);
 
-      expect(viewModel.activeSection, WorkspaceSection.history);
+      expect(viewModel.activeSection, WorkspaceSection.settings);
       expect(viewModel.activeWebSocketSession.canSend, isTrue);
       expect(viewModel.activeWebSocketSession.events.single.preview, 'update');
+    },
+  );
+
+  test(
+    'WebSocket keeps its environment snapshot when the active environment changes',
+    () async {
+      final transport = _TestWebSocketTransport();
+      final viewModel = _webSocketViewModel(transport);
+
+      await viewModel.connectActiveWebSocket();
+      final before = viewModel.activeWebSocketSession;
+
+      viewModel.selectEnvironment('production');
+
+      final after = viewModel.activeWebSocketSession;
+      expect(after.state, WebSocketConnectionState.connected);
+      expect(after.endpoint, before.endpoint);
+      expect(after.sessionContext.environmentName, 'Staging');
+      expect(
+        after.sessionContext.authenticationLabel,
+        'Environment Bearer token',
+      );
+      expect(after.requiresReconnect, isTrue);
+      expect(transport.configurations, hasLength(1));
+      expect(transport.connection.closed, isFalse);
     },
   );
 
@@ -566,35 +697,19 @@ void main() {
 
     expect(transport.connection.closed, isTrue);
     expect(viewModel.openRequestTabs, isEmpty);
-    expect(viewModel.activeSection, WorkspaceSection.dashboard);
+    expect(viewModel.activeSection, WorkspaceSection.requests);
   });
 
-  test(
-    'WebSocket termination adds one redacted session summary to history',
-    () async {
-      final transport = _TestWebSocketTransport();
-      final viewModel = _webSocketViewModel(transport);
-      viewModel.updateActiveDraftUrl('ws://localhost/events?token=token-value');
-      viewModel.updateActiveDraftField(headers: false, index: 0, secret: true);
+  test('disposing the Workspace releases active WebSocket sessions', () async {
+    final transport = _TestWebSocketTransport();
+    final viewModel = _webSocketViewModel(transport);
 
-      await viewModel.connectActiveWebSocket();
-      transport.connection.emit(const WebSocketTransportEvent.text('inbound'));
-      await Future<void>.delayed(Duration.zero);
-      await viewModel.sendActiveWebSocketMessage();
-      await viewModel.disconnectActiveWebSocket();
+    await viewModel.connectActiveWebSocket();
+    viewModel.dispose();
+    await Future<void>.delayed(Duration.zero);
 
-      final record = viewModel.history.first;
-      final summary = record.webSocketSummary;
-      expect(record.method, 'WS');
-      expect(summary?.terminalStatus, 'closed');
-      expect(summary?.inboundMessageCount, 1);
-      expect(summary?.outboundMessageCount, 1);
-      expect(summary?.endpoint, contains('••••••••'));
-      expect(summary?.endpoint, isNot(contains('token-value')));
-      expect(record.requestSnapshot, isNull);
-      expect(record.response, isNull);
-    },
-  );
+    expect(transport.connection.closed, isTrue);
+  });
 
   // 草稿可在未连接状态持续编辑，但发送操作不得触达 transport。
   test(
@@ -638,7 +753,7 @@ void main() {
 
       expect(transport.connection.sentText, [
         'ready',
-        '{"event":"ready"}',
+        '{\n  "event": "ready"\n}',
         '<event>ready</event>',
       ]);
       expect(transport.connection.sentBinary, hasLength(1));
@@ -646,10 +761,11 @@ void main() {
         transport.connection.sentBinary.single,
         Uint8List.fromList([1, 2]),
       );
+      expect(viewModel.activeWebSocketMessageDraft.payload, isEmpty);
       expect(
         viewModel.activeWebSocketSession.events.map((event) => event.preview),
         containsAll([
-          'JSON: {"event":"ready"}',
+          'JSON: {\n  "event": "ready"\n}',
           'XML: <event>ready</event>',
           'MessagePack (2 bytes)',
         ]),
@@ -679,7 +795,10 @@ void main() {
 
       final error = await viewModel.importActiveGrpcProto(invalidProto.path);
 
-      expect(error, contains('missing.proto'));
+      expect(
+        error,
+        'Could not import proto source. Review the file and try again.',
+      );
       expect(viewModel.activeDraft.grpc.protoSchema?.path, existingSchema.path);
       expect(
         viewModel.activeDraft.grpc.protoSchema?.fingerprint,
@@ -736,7 +855,13 @@ void main() {
     viewModel.selectActiveGrpcMethod('Check');
     viewModel.updateActiveDraftBody('{"host":"api"}');
 
-    await viewModel.sendActiveRequest();
+    viewModel.dispatch(
+      WorkspaceGlobalAction(
+        type: WorkspaceActionType.send,
+        source: WorkspaceActionSource.keyboard,
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
     transport.call.emit(
       GrpcTransportEvent.message(Uint8List.fromList([10, 3, 97, 112, 105])),
     );
@@ -775,12 +900,15 @@ void main() {
       viewModel.updateActiveDraftBody('{"host":"api"}');
       await viewModel.sendActiveGrpcRequest();
 
-      viewModel.selectSection(WorkspaceSection.history);
+      viewModel.selectSection(WorkspaceSection.settings);
       transport.call.emit(
         GrpcTransportEvent.message(Uint8List.fromList([10, 3, 97, 112, 105])),
       );
       await Future<void>.delayed(Duration.zero);
-      expect(viewModel.activeGrpcCall.events, hasLength(1));
+      expect(viewModel.activeGrpcCall.events.map((event) => event.kind), [
+        GrpcTransportEventKind.request,
+        GrpcTransportEventKind.message,
+      ]);
 
       final tab = viewModel.openRequestTabs.singleWhere(
         (item) => item.requestId == 'demo-rest-list-users',
@@ -790,6 +918,247 @@ void main() {
       expect(transport.call.cancelled, isTrue);
     },
   );
+
+  test(
+    'gRPC client streams send messages and retain outbound timeline data',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sendreq-grpc-');
+      addTearDown(() => directory.delete(recursive: true));
+      final proto = File('${directory.path}/health.proto');
+      await proto.writeAsString(
+        'syntax = "proto3"; package sendreq; message Check { string host = 1; } service Health { rpc Chat (stream Check) returns (stream Check); }',
+      );
+      final transport = _TestGrpcTransport();
+      final viewModel = workspaceViewModel(
+        assetRepository: InMemoryApiAssetRepository.demo(),
+        grpcTransport: transport,
+      );
+      viewModel.updateActiveDraftProtocol(ApiRequestProtocol.grpc);
+      viewModel.updateActiveDraftUrl('http://127.0.0.1:8080');
+      await viewModel.importActiveGrpcProto(proto.path);
+      viewModel.selectActiveGrpcService('.sendreq.Health');
+      viewModel.selectActiveGrpcMethod('Chat');
+      expect(viewModel.activeRequestTab, 'Body');
+      viewModel.updateActiveDraftBody('{"host":"api"}');
+
+      await viewModel.sendActiveGrpcRequest();
+      expect(transport.configurations.single.clientStreaming, isTrue);
+      expect(transport.call.sentMessages, isEmpty);
+      expect(viewModel.canSendActiveGrpcMessage, isTrue);
+
+      await viewModel.sendActiveGrpcMessage();
+      final requestEvent = viewModel.activeGrpcCall.events.single;
+      expect(transport.call.sentMessages, [
+        Uint8List.fromList([10, 3, 97, 112, 105]),
+      ]);
+      expect(requestEvent.kind, GrpcTransportEventKind.request);
+      expect(
+        viewModel.decodeActiveGrpcEvent(requestEvent)?.formattedJson,
+        contains('"host": "api"'),
+      );
+
+      await viewModel.closeActiveGrpcRequestStream();
+      expect(transport.call.requestStreamClosed, isTrue);
+      expect(viewModel.canSendActiveGrpcMessage, isFalse);
+    },
+  );
+
+  test(
+    'request-only No auth does not inherit environment Bearer metadata for gRPC',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sendreq-grpc-');
+      addTearDown(() => directory.delete(recursive: true));
+      final proto = File('${directory.path}/health.proto');
+      await proto.writeAsString(
+        'syntax = "proto3"; package sendreq; message Check { string host = 1; } service Health { rpc Check (Check) returns (Check); }',
+      );
+      final transport = _TestGrpcTransport();
+      final viewModel = workspaceViewModel(
+        assetRepository: InMemoryApiAssetRepository.demo(),
+        environmentStore: InMemoryEnvironmentStore.sample(),
+        grpcTransport: transport,
+      );
+      viewModel.updateActiveDraftProtocol(ApiRequestProtocol.grpc);
+      viewModel.updateActiveDraftUrl('http://127.0.0.1:50051');
+      await viewModel.importActiveGrpcProto(proto.path);
+      viewModel.selectActiveGrpcService('.sendreq.Health');
+      viewModel.selectActiveGrpcMethod('Check');
+      viewModel.updateActiveDraftBody('{"host":"api"}');
+      viewModel.setActiveAuthenticationSource(
+        RequestAuthenticationSource.request,
+      );
+      viewModel.setActiveAuthenticationType(RequestAuthenticationType.none);
+
+      await viewModel.sendActiveGrpcRequest();
+
+      expect(
+        transport.configurations.single.metadata,
+        isNot(contains('authorization')),
+      );
+      expect(
+        viewModel.activeGrpcCall.sessionContext.authenticationLabel,
+        'No authentication',
+      );
+    },
+  );
+
+  test(
+    'gRPC keeps its snapshot across environment changes but not message draft edits',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sendreq-grpc-');
+      addTearDown(() => directory.delete(recursive: true));
+      final proto = File('${directory.path}/chat.proto');
+      await proto.writeAsString(
+        'syntax = "proto3"; package sendreq; message Check { string host = 1; } service Health { rpc Chat (stream Check) returns (stream Check); }',
+      );
+      final transport = _TestGrpcTransport();
+      final viewModel = workspaceViewModel(
+        assetRepository: InMemoryApiAssetRepository.demo(),
+        grpcTransport: transport,
+      );
+      viewModel.updateActiveDraftProtocol(ApiRequestProtocol.grpc);
+      viewModel.updateActiveDraftUrl('{{baseUrl}}');
+      viewModel.setActiveAuthenticationSource(
+        RequestAuthenticationSource.environment,
+      );
+      await viewModel.importActiveGrpcProto(proto.path);
+      viewModel.selectActiveGrpcService('.sendreq.Health');
+      viewModel.selectActiveGrpcMethod('Chat');
+      viewModel.updateActiveDraftBody('{"host":"before"}');
+
+      await viewModel.sendActiveGrpcRequest();
+      viewModel.updateActiveDraftBody('{"host":"after"}');
+
+      expect(viewModel.activeGrpcCall.requiresRestart, isFalse);
+      expect(
+        viewModel.activeGrpcCall.sessionContext.environmentName,
+        'Staging',
+      );
+      expect(transport.call.cancelled, isFalse);
+
+      viewModel.selectEnvironment('production');
+
+      expect(viewModel.activeGrpcCall.state, GrpcCallState.running);
+      expect(
+        viewModel.activeGrpcCall.sessionContext.environmentName,
+        'Staging',
+      );
+      expect(
+        viewModel.activeGrpcCall.sessionContext.authenticationLabel,
+        'Environment Bearer token',
+      );
+      expect(viewModel.activeGrpcCall.requiresRestart, isTrue);
+      expect(transport.configurations, hasLength(1));
+      expect(transport.call.cancelled, isFalse);
+
+      await viewModel.restartActiveGrpcCall();
+
+      expect(transport.configurations, hasLength(2));
+      expect(
+        transport.configurations.last.effectiveSessionContext.environmentName,
+        'Production',
+      );
+      expect(
+        transport.configurations.last.effectiveSessionContext.environmentId,
+        'production',
+      );
+      expect(
+        transport.configurations.last.effectiveSessionContext.rpcShape,
+        GrpcRpcShape.bidirectionalStreaming,
+      );
+      expect(viewModel.activeGrpcCall.requiresRestart, isFalse);
+    },
+  );
+
+  test(
+    'every gRPC shape freezes its environment across unsaved token changes',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('sendreq-grpc-');
+      addTearDown(() => directory.delete(recursive: true));
+      final proto = File('${directory.path}/flow.proto');
+      await proto.writeAsString(_grpcFlowProto);
+      final cases = <String, GrpcRpcShape>{
+        'Unary': GrpcRpcShape.unary,
+        'Client': GrpcRpcShape.clientStreaming,
+        'Server': GrpcRpcShape.serverStreaming,
+        'Bidi': GrpcRpcShape.bidirectionalStreaming,
+      };
+
+      for (final entry in cases.entries) {
+        final environments = InMemoryEnvironmentStore.sample();
+        final transport = _TestGrpcTransport();
+        final viewModel = workspaceViewModel(
+          assetRepository: InMemoryApiAssetRepository.demo(),
+          environmentStore: environments,
+          grpcTransport: transport,
+        );
+        viewModel.updateActiveDraftProtocol(ApiRequestProtocol.grpc);
+        viewModel.updateActiveDraftUrl('{{baseUrl}}');
+        viewModel.setActiveAuthenticationSource(
+          RequestAuthenticationSource.environment,
+        );
+        expect(await viewModel.importActiveGrpcProto(proto.path), isNull);
+        viewModel.selectActiveGrpcService('.sendreq.Flow');
+        viewModel.selectActiveGrpcMethod(entry.key);
+        viewModel.updateActiveDraftBody('{"value":"before"}');
+
+        await viewModel.sendActiveGrpcRequest();
+        expect(
+          viewModel.activeGrpcCall.rpcShape,
+          entry.value,
+          reason: entry.key,
+        );
+        expect(
+          viewModel.activeGrpcCall.sessionContext.environmentName,
+          'Staging',
+          reason: entry.key,
+        );
+
+        viewModel.updateEnvironmentVariable(
+          id: 'staging-token',
+          value: 'unsaved-${entry.value.name}-token',
+        );
+
+        expect(viewModel.hasEnvironmentChanges, isTrue, reason: entry.key);
+        expect(viewModel.activeGrpcCall.requiresRestart, isTrue);
+        expect(viewModel.activeGrpcCall.state, GrpcCallState.running);
+        expect(
+          viewModel.activeGrpcCall.sessionContext.environmentName,
+          'Staging',
+        );
+        expect(transport.call.cancelled, isFalse);
+
+        viewModel.selectEnvironment('production');
+        expect(viewModel.hasEnvironmentChanges, isTrue, reason: entry.key);
+        expect(
+          viewModel.activeGrpcCall.sessionContext.environmentName,
+          'Staging',
+        );
+
+        await viewModel.restartActiveGrpcCall();
+        expect(
+          transport.configurations.last.effectiveSessionContext.rpcShape,
+          entry.value,
+        );
+        expect(
+          transport.configurations.last.effectiveSessionContext.environmentName,
+          'Production',
+        );
+        expect(viewModel.activeGrpcCall.requiresRestart, isFalse);
+        viewModel.dispose();
+      }
+    },
+  );
+
+  test('opening a gRPC request starts on the message composer', () {
+    final viewModel = workspaceViewModel(
+      assetRepository: InMemoryApiAssetRepository.demo(),
+    );
+
+    viewModel.selectRequest('demo-grpc-order-chat');
+
+    expect(viewModel.activeRequestTab, 'Body');
+  });
 
   // 场景：保存请求时，multipart 的表单字段、批量文件名与文件大小等信息应完整保留。
   test('multipart file selections survive saving the request', () {
@@ -835,6 +1204,34 @@ void main() {
   });
 }
 
+class _PendingExecutionService implements ExecutionService {
+  final started = Completer<void>();
+  final result = Completer<SanitizedExecutionResult>();
+  final List<String> cancelledExecutionIds = [];
+
+  @override
+  Future<void> disposeRequestSessions(RequestRef requestRef) async {}
+
+  @override
+  Future<SanitizedExecutionResult> execute(ResolvedExecutionCommand command) {
+    started.complete();
+    return result.future;
+  }
+
+  @override
+  Future<OperationOutcome> cancel(String executionId) async {
+    cancelledExecutionIds.add(executionId);
+    return OperationOutcome(
+      kind: OperationOutcomeKind.cancelled,
+      code: 'execution.cancelRequested',
+      relatedExecutionId: executionId,
+    );
+  }
+
+  @override
+  Future<SanitizedSessionProjection?> session(String sessionId) async => null;
+}
+
 /// 可手动控制完成时机的运行时：由测试显式完成响应，并统计 cancel 调用次数。
 class _TestGrpcTransport implements GrpcTransport {
   final call = _TestGrpcCall();
@@ -850,11 +1247,23 @@ class _TestGrpcTransport implements GrpcTransport {
 class _TestGrpcCall implements GrpcCall {
   final _events = StreamController<GrpcTransportEvent>.broadcast();
   bool cancelled = false;
+  bool requestStreamClosed = false;
+  final sentMessages = <Uint8List>[];
 
   @override
   Stream<GrpcTransportEvent> get events => _events.stream;
 
   void emit(GrpcTransportEvent event) => _events.add(event);
+
+  @override
+  Future<void> send(Uint8List message) async {
+    sentMessages.add(Uint8List.fromList(message));
+  }
+
+  @override
+  Future<void> closeRequestStream() async {
+    requestStreamClosed = true;
+  }
 
   @override
   Future<void> cancel() async {
@@ -918,13 +1327,20 @@ RuntimeResponse _response() => const RuntimeResponse(
 );
 
 /// 为 WebSocket 工作区测试创建已配置但尚未连接的请求。
-WorkspaceViewModel _webSocketViewModel(_TestWebSocketTransport transport) {
+WorkspaceViewModel _webSocketViewModel(
+  _TestWebSocketTransport transport, {
+  ContractPublishingService? contractPublishingService,
+}) {
   final viewModel = workspaceViewModel(
     assetRepository: InMemoryApiAssetRepository.demo(),
     webSocketTransport: transport,
+    contractPublishingService: contractPublishingService,
   );
   viewModel.updateActiveDraftProtocol(ApiRequestProtocol.webSocket);
   viewModel.updateActiveDraftUrl('ws://localhost/events');
+  viewModel.setActiveAuthenticationSource(
+    RequestAuthenticationSource.environment,
+  );
   return viewModel;
 }
 

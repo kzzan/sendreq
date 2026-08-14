@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import '../../domain/api_assets/api_asset_models.dart';
-import '../../domain/repositories/api_asset_repository.dart';
-import 'in_memory_api_asset_repository.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/repositories/api_asset_repository.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_repository.dart';
 
-/// Persists API assets locally while retaining the in-memory repository rules.
+/// 将 API 资产持久化到本地，同时保留内存仓库的数据变更规则。
 class FileApiAssetRepository implements ApiAssetRepository {
   /// 私有构造：包装内存仓库与可选的配置目录。
   FileApiAssetRepository._(this._delegate, {this.configurationDirectory});
@@ -94,6 +94,7 @@ class FileApiAssetRepository implements ApiAssetRepository {
   void _changed() => _writeQueue = _writeQueue.then((_) => _write());
 
   /// 等待所有排队的写盘操作完成。
+  @override
   Future<void> flush() => _writeQueue;
 
   /// 在 Isar 导入前保留旧 JSON 资产文件，迁移失败时可人工恢复。
@@ -170,10 +171,15 @@ class FileApiAssetRepository implements ApiAssetRepository {
 
   /// 新建一个请求定义并持久化。
   @override
-  ApiRequestDefinition createRequest({String? collectionId, String? folderId}) {
+  ApiRequestDefinition createRequest({
+    String? collectionId,
+    String? folderId,
+    ApiRequestProtocol protocol = ApiRequestProtocol.http,
+  }) {
     final value = _delegate.createRequest(
       collectionId: collectionId,
       folderId: folderId,
+      protocol: protocol,
     );
     _changed();
     return value;

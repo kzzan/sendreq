@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:sendreq/data/services/http_request_execution_runtime.dart';
-import 'package:sendreq/domain/models/workspace_models.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
 import 'package:sendreq/domain/request_runtime/request_execution_runtime.dart';
 
 void main() {
@@ -38,6 +38,50 @@ void main() {
     );
   });
 
+  test(
+    'URL encoded forms send resolved structured fields instead of raw body',
+    () async {
+      final client = _RecordingClient();
+      final runtime = HttpRequestExecutionRuntime(clientFactory: () => client);
+      const draft = RequestDraft(
+        method: 'POST',
+        baseUrlToken: '',
+        path: 'https://example.test/login',
+        params: [],
+        headers: [
+          KeyValueRow(
+            keyName: 'Content-Type',
+            value: 'application/x-www-form-urlencoded; charset=utf-8',
+          ),
+        ],
+        body: 'raw-body-must-not-be-sent',
+        formUrlEncodedFields: [
+          KeyValueRow(keyName: 'name', value: 'Mary Jane'),
+          KeyValueRow(keyName: 'tag', value: 'a&b'),
+          KeyValueRow(keyName: 'tag', value: 'next'),
+          KeyValueRow(keyName: 'note', value: '你好'),
+          KeyValueRow(keyName: 'empty', value: ''),
+          KeyValueRow(keyName: 'ignored', value: 'no', enabled: false),
+        ],
+      );
+
+      await runtime.send(draft: draft, resolvedUrl: draft.path);
+
+      expect(
+        client.body,
+        'name=Mary+Jane&tag=a%26b&tag=next&note=%E4%BD%A0%E5%A5%BD&empty=',
+      );
+      expect(client.body, isNot(contains('raw-body-must-not-be-sent')));
+      expect(client.body, isNot(contains('ignored')));
+      expect(
+        client.headers.entries
+            .singleWhere((entry) => entry.key.toLowerCase() == 'content-type')
+            .value,
+        'application/x-www-form-urlencoded; charset=utf-8',
+      );
+    },
+  );
+
   // 验证 multipart 上传请求：运行时应将普通表单字段与多个文件流式写入请求体，
   // 并透传额外的请求头。通过记录客户端截获实际发出的内容进行断言。
   test('multipart requests stream form fields and selected files', () async {
@@ -64,6 +108,8 @@ void main() {
       body: '',
       multipartFields: const [
         KeyValueRow(keyName: 'description', value: 'profile image'),
+        KeyValueRow(keyName: 'tag', value: 'first'),
+        KeyValueRow(keyName: 'tag', value: 'second'),
       ],
       multipartFiles: [
         MultipartFileRow(
@@ -102,6 +148,9 @@ void main() {
     // 请求体应同时包含普通字段与每个文件（含文件名与内容）。
     expect(client.body, contains('name="description"'));
     expect(client.body, contains('profile image'));
+    expect(RegExp('name="tag"').allMatches(client.body), hasLength(2));
+    expect(client.body, contains('first'));
+    expect(client.body, contains('second'));
     expect(client.body, contains('name="files[]"; filename="avatar.txt"'));
     expect(client.body, contains('avatar-content'));
     expect(client.body, contains('name="files[]"; filename="banner.txt"'));

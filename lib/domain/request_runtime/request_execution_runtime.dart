@@ -1,4 +1,4 @@
-import '../models/workspace_models.dart';
+import 'package:sendreq/domain/workspace/workspace_models.dart';
 
 /// 请求执行的运行时响应结果。
 class RuntimeResponse {

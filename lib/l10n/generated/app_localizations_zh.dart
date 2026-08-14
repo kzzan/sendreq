@@ -15,10 +15,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsSubtitle => '本地工作区偏好';
 
   @override
-  String get savePreferences => '保存偏好';
+  String get saved => '已保存';
 
   @override
-  String get saved => '已保存';
+  String get preferencesSaved => '已自动保存';
+
+  @override
+  String get preferencesSaving => '正在保存...';
+
+  @override
+  String get preferencesSaveFailedShort => '保存失败';
 
   @override
   String get appearance => '外观';
@@ -27,10 +33,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearanceDescription => '选择 sendreq 使用的桌面外观。';
 
   @override
-  String get font => '字体';
+  String get font => '界面字体';
 
   @override
-  String get fontDescription => '设置界面字体；代码和数据区域仍保持等宽字体。';
+  String get fontDescription => '设置导航、标签和控件使用的字体。';
+
+  @override
+  String get codeFont => '代码字体';
+
+  @override
+  String get codeFontDescription => '设置请求、JSON 和时间线使用的等宽字体。';
+
+  @override
+  String get codeFontSize => '代码字号';
+
+  @override
+  String get codeFontSizeDescription => '设置代码和结构化数据的基准字号。';
 
   @override
   String get light => '浅色';
@@ -48,125 +66,77 @@ class AppLocalizationsZh extends AppLocalizations {
   String get languageDescription => '选择 sendreq 中使用的界面语言。';
 
   @override
+  String get updates => '版本更新';
+
+  @override
+  String get updateDescription => '从 GitHub Releases 检查 sendreq 桌面端的新版本。';
+
+  @override
+  String get checkForUpdates => '检查更新';
+
+  @override
+  String get checkingForUpdates => '正在检查 GitHub Releases...';
+
+  @override
+  String get updateCheckNotRun => '尚未检查更新。';
+
+  @override
+  String appIsUpToDate(String version) {
+    return '当前版本 $version 已是最新版本。';
+  }
+
+  @override
+  String appUpdateAvailable(String version) {
+    return '发现新版本 $version。';
+  }
+
+  @override
+  String get updateCheckFailed => '无法检查 GitHub Releases，请重试。';
+
+  @override
+  String get updateNow => '立即更新';
+
+  @override
   String get english => 'English';
 
   @override
   String get simplifiedChinese => '简体中文';
 
   @override
-  String get keyboardShortcuts => '键盘快捷键';
-
-  @override
   String get sendRequest => '发送请求';
 
   @override
-  String get sendShortcutDescription => '选择全局“发送”操作使用的快捷键。';
-
-  @override
-  String get shortcutConflictWarning => 'Ctrl+Space 可能与输入法切换或编辑器补全冲突。';
-
-  @override
-  String get customShortcut => '自定义快捷键';
-
-  @override
-  String get noCustomShortcut => '尚未设置';
-
-  @override
-  String get recordShortcut => '录入快捷键';
-
-  @override
-  String get recordShortcutHint => '按下一个组合键。按 Esc 取消。';
-
-  @override
-  String get shortcutModifierRequired => '请使用 Ctrl、Cmd、Alt 或 Shift 加其他按键。';
-
-  @override
-  String get shortcutReserved => 'Ctrl/Cmd+K 和 Ctrl/Cmd+S 已被系统操作占用。';
-
-  @override
-  String get shortcutUnavailable => '此快捷键不可用。';
-
-  @override
-  String shortcutUpdated(String shortcut) {
-    return '发送快捷键已设为 $shortcut。';
-  }
-
-  @override
-  String get resetPreferencesDescription => '重置只恢复偏好设置，不会删除请求、环境和历史记录。';
+  String get resetPreferencesDescription => '重置只恢复偏好设置，不会删除请求和环境。';
 
   @override
   String get resetDefaults => '恢复默认设置';
 
   @override
-  String get preferencesSaved => '偏好设置已保存';
-
-  @override
   String get preferencesSaveFailed => '无法保存偏好设置，请重试。';
 
   @override
-  String get documentationExport => '文档导出';
-
-  @override
-  String get documentationOutputDirectoryDescription =>
-      '选择导出的 Markdown 接口文档写入的位置。';
-
-  @override
-  String get noDocumentationOutputDirectory => '尚未选择输出文件夹';
-
-  @override
-  String get chooseDocumentationOutputFolder => '选择文档输出文件夹';
-
-  @override
-  String get chooseOutputDirectory => '选择输出文件夹';
-
-  @override
-  String get changeOutputDirectory => '更改输出文件夹';
-
-  @override
-  String get defaultOutputDirectory => '默认文件夹';
-
-  @override
-  String get customOutputDirectory => '自定义文件夹';
-
-  @override
-  String get restoreDefaultOutputDirectory => '使用默认输出文件夹';
-
-  @override
-  String documentationOutputDirectoryUnavailable(String error) {
-    return '无法创建输出文件夹：$error';
-  }
-
-  @override
-  String get documentationOutputDirectoryPrepareFailed =>
-      '无法创建文档输出文件夹。请选择其他文件夹后重试。';
-
-  @override
-  String get clearOutputDirectory => '清除输出文件夹';
-
-  @override
-  String get configureDocumentationOutputDirectory => '请先在设置中选择文档输出文件夹。';
-
-  @override
-  String get exportMarkdown => '导出 Markdown';
-
-  @override
-  String markdownExportedTo(String path) {
-    return 'Markdown 接口文档已导出至 $path。';
-  }
-
-  @override
-  String markdownExportFailed(String error) {
-    return '无法导出 Markdown 接口文档：$error';
-  }
-
-  @override
   String get environmentChangesSaved => '环境修改已保存。';
+
+  @override
+  String get environmentChangesDiscarded => '已放弃环境修改。';
 
   @override
   String get environmentChangesPending => '环境修改尚未保存。';
 
   @override
   String get environmentSaveFailed => '无法保存环境修改，请重试。';
+
+  @override
+  String get environmentCreated => '环境已创建。';
+
+  @override
+  String get environmentRenamed => '环境已重命名。';
+
+  @override
+  String get environmentDeleted => '环境已删除。';
+
+  @override
+  String get demoExampleLoaded => '演示示例已载入。';
 
   @override
   String get invalidHttpStatus => '请输入 100 到 599 之间的 HTTP 状态码。';
@@ -193,7 +163,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collectionRenamed => '集合已重命名。';
 
   @override
-  String get folderRenamed => '文件夹已重命名。';
+  String get folderRenamed => '分组已重命名。';
 
   @override
   String get requestChangesSaved => '请求修改已保存。';
@@ -229,40 +199,191 @@ class AppLocalizationsZh extends AppLocalizations {
   String get grpcMetadataHint => '已启用的请求头将作为 gRPC metadata 发送。';
 
   @override
+  String get grpcMetadata => '元数据';
+
+  @override
+  String get grpcMessage => '消息';
+
+  @override
+  String get grpcProto => 'Proto';
+
+  @override
+  String get grpcDeadline => '截止时间';
+
+  @override
+  String get grpcDeadlineHint => '可选调用超时';
+
+  @override
+  String get millisecondsShort => '毫秒';
+
+  @override
+  String get discoverGrpcServices => '发现服务';
+
+  @override
+  String get discoveringGrpcServices => '正在发现...';
+
+  @override
+  String get grpcSchemaFromReflection => '服务定义来自当前端点的反射';
+
+  @override
+  String get grpcStartStream => '启动流';
+
+  @override
+  String get grpcSendMessage => '发送消息';
+
+  @override
+  String get grpcEndRequestStream => '结束发送';
+
+  @override
+  String get grpcClientStreaming => '客户端流';
+
+  @override
+  String get grpcServerStreaming => '服务端流';
+
+  @override
+  String get grpcBidirectionalStreaming => '双向流';
+
+  @override
+  String get grpcUnary => '一元';
+
+  @override
+  String get grpcRequestMessage => '请求消息';
+
+  @override
+  String get grpcNoRequestSchema => '选择服务和 RPC 方法后显示请求字段。';
+
+  @override
+  String get grpcNextStreamMessage => '下一条流消息';
+
+  @override
+  String get grpcCallPayload => '调用载荷';
+
+  @override
+  String get grpcWireInvalid => '载荷无效';
+
+  @override
+  String get grpcMessageSchema => '消息字段';
+
+  @override
+  String get grpcFieldRepeated => '重复';
+
+  @override
+  String grpcFieldOneof(String name) {
+    return '互斥：$name';
+  }
+
+  @override
+  String get grpcEventSent => '已发送';
+
+  @override
+  String get grpcEventReceived => '已接收';
+
+  @override
+  String get grpcEventHeaders => '响应头';
+
+  @override
+  String get grpcEventTrailers => '响应尾';
+
+  @override
+  String get grpcEventStatus => '状态';
+
+  @override
+  String get grpcEventError => '错误';
+
+  @override
+  String get grpcRequestStreamOpen => '发送已打开';
+
+  @override
+  String get grpcRequestStreamClosed => '发送已结束';
+
+  @override
+  String get grpcStateIdle => '空闲';
+
+  @override
+  String get grpcStateStarting => '正在启动';
+
+  @override
+  String get grpcStateRunning => '运行中';
+
+  @override
+  String get grpcStateCompleted => '已完成';
+
+  @override
+  String get grpcStateCancelling => '正在取消';
+
+  @override
+  String get grpcStateCancelled => '已取消';
+
+  @override
+  String get grpcStateFailed => '失败';
+
+  @override
+  String get start => '启动';
+
+  @override
+  String get stop => '停止';
+
+  @override
   String get changeRequestProtocol => '切换请求协议';
 
   @override
-  String get changeHttpMethod => '切换 HTTP 方法';
+  String get changeHttpMethod => '更改 HTTP 方法';
 
   @override
   String get workspace => '工作区';
 
   @override
-  String get dashboard => '仪表盘';
+  String get requests => '请求';
+
+  @override
+  String get allRequests => '全部请求';
+
+  @override
+  String get restRequests => 'REST';
+
+  @override
+  String get webSocketRequests => 'WebSocket';
+
+  @override
+  String get grpcRequests => 'gRPC';
+
+  @override
+  String get requestWorkingViews => '请求类型';
+
+  @override
+  String get mock => 'Mock';
+
+  @override
+  String get manage => '管理';
 
   @override
   String get collections => '集合';
 
   @override
-  String get collectionActions => '集合操作';
+  String get collectionResources => '集合资源';
 
   @override
-  String get history => '历史记录';
+  String get collectionActions => '集合操作';
 
   @override
   String get environments => '环境';
 
   @override
-  String get mockServers => 'Quick Mock';
+  String get savedMockServers => '已保存的 Mock Server';
 
   @override
-  String get documentation => '文档';
+  String get saveAsMockServer => '保存为 Mock Server';
 
   @override
-  String get docs => '文档';
+  String get startMockServer => '启动 Server';
 
   @override
-  String get searchMetrics => '搜索指标...';
+  String get stopMockServer => '停止 Server';
+
+  @override
+  String mockEndpoints(int count) {
+    return '$count 个端点';
+  }
 
   @override
   String get searchRequests => '搜索请求...';
@@ -271,40 +392,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clearSearch => '清除搜索';
 
   @override
-  String get searchHistory => '搜索历史...';
-
-  @override
-  String get searchVariables => '搜索变量...';
-
-  @override
-  String get searchMocks => '搜索 Quick Mock...';
-
-  @override
-  String get searchDocumentation => '搜索文档...';
-
-  @override
-  String get searchSettings => '搜索设置...';
-
-  @override
-  String get openCommandPalette => '打开命令面板';
-
-  @override
   String get activeEnvironment => '当前环境';
 
   @override
-  String get activeEnvironmentShort => '当前环境';
+  String get activeEnvironmentShort => '环境';
+
+  @override
+  String get environmentLabel => '环境';
+
+  @override
+  String get environmentLabelShort => '环境';
+
+  @override
+  String get manageEnvironments => '管理环境...';
+
+  @override
+  String get useForNextCall => '用于下一次调用';
+
+  @override
+  String get useForRequests => '用于请求';
+
+  @override
+  String editingEnvironment(String name) {
+    return '正在编辑：$name';
+  }
+
+  @override
+  String environmentContextTooltip(String name) {
+    return '当前环境：$name。切换或管理环境。';
+  }
+
+  @override
+  String currentSessionEnvironment(String name) {
+    return '当前会话：$name';
+  }
+
+  @override
+  String nextCallEnvironment(String name) {
+    return '下一次调用：$name';
+  }
 
   @override
   String get variablesResolveBeforeSend => '变量会在发送前解析。';
-
-  @override
-  String get openDocumentation => '打开文档';
-
-  @override
-  String get saveActiveResource => '保存当前资源';
-
-  @override
-  String get noSaveableChanges => '没有可保存的修改';
 
   @override
   String get minimizeWindow => '最小化窗口';
@@ -331,13 +460,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get response => '响应';
 
   @override
-  String get commandPalette => '命令面板';
-
-  @override
-  String get searchCommands => '搜索命令';
-
-  @override
   String get noMatchingResources => '没有匹配的资源';
+
+  @override
+  String get requestProtocolFilter => '按协议筛选请求';
+
+  @override
+  String get allRequestProtocols => '全部请求协议';
 
   @override
   String get sendActiveRequest => '发送当前请求';
@@ -363,10 +492,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noChanges => '无修改';
 
   @override
+  String get unsavedEnvironmentChanges => '环境修改尚未保存';
+
+  @override
+  String get discardEnvironmentChangesTitle => '放弃环境修改？';
+
+  @override
+  String get discardEnvironmentChangesMessage => '变量、认证和环境编辑将恢复到上次保存的版本。';
+
+  @override
+  String get closeEnvironmentManagerTitle => '要应用环境修改吗？';
+
+  @override
+  String get closeEnvironmentManagerMessage => '返回请求前应用这些修改，或放弃修改并恢复到上次保存的环境。';
+
+  @override
   String get currentEnvironment => '当前环境';
 
   @override
   String get selectCurrentEnvironment => '选择当前环境';
+
+  @override
+  String get selectEnvironmentToEdit => '选择要编辑的环境';
 
   @override
   String get newEnvironment => '新增环境';
@@ -419,7 +566,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get managedByAuthentication => '由认证管理';
 
   @override
-  String get environmentAuditNote => '保存修改后会生成轻量修订记录；完整审计差异将在后续版本提供。';
+  String get environmentAuditNote => '点击应用后修改生效。';
 
   @override
   String get variableValue => '变量值';
@@ -434,7 +581,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteVariable => '删除变量';
 
   @override
-  String get requiredTokenVariable => '每个环境均需保留 token';
+  String get requiredTokenVariable => '由当前环境的 Bearer 认证管理';
 
   @override
   String get requiredEnvironmentBaseUrl => '每个环境均需保留基础 URL';
@@ -461,7 +608,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inheritEnvironmentAuthentication => '继承环境认证';
 
   @override
-  String get requestSpecificAuthentication => '请求专用认证';
+  String get requestSpecificAuthentication => '仅此请求（不继承环境）';
 
   @override
   String get configureEnvironmentAuthentication => '配置环境认证';
@@ -517,16 +664,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get apiKeyAuthenticationStored => '仅在发送请求时生成 API Key。';
 
   @override
-  String get noMockDraft => '尚无 Quick Mock';
+  String get noMockDraft => '尚无 Mock Server';
 
   @override
-  String get mockDraftDescription => '仅当前会话可用，关闭 sendreq 后自动移除。';
+  String get mockDraftDescription => '创建一个持久化的本地 HTTP Mock Server。';
 
   @override
-  String get newMock => '新建 Quick Mock';
+  String get newMock => '新建 Server';
 
   @override
-  String get createMockFromResponse => '用响应创建 Quick Mock';
+  String get createMockFromResponse => '从响应创建';
 
   @override
   String get manualMock => '手动配置';
@@ -535,7 +682,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openCollections => '打开集合';
 
   @override
-  String get mockDraft => 'Quick Mock';
+  String get mockDraft => 'Mock Server';
 
   @override
   String get fromLatestResponse => '基于最近一次响应';
@@ -547,10 +694,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get responseExample => '响应示例';
 
   @override
-  String get mockResponse => '返回内容';
+  String get mockResponse => 'Mock 响应';
 
   @override
-  String get mockLoopbackNote => '按方法和路径匹配，忽略查询参数。';
+  String get mockLoopbackNote => '仅支持 HTTP；点击启动后监听 127.0.0.1。';
 
   @override
   String get localRuntime => '本地运行时';
@@ -562,40 +709,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get stopped => '已停止';
 
   @override
-  String get stopServer => '停止 Quick Mock';
+  String get stopServer => '停止 Server';
 
   @override
-  String get startServer => '启动 Quick Mock';
+  String get startServer => '启动 Server';
 
   @override
-  String get copyMockAddress => '复制 Quick Mock 地址';
+  String get copyMockAddress => '复制 Server 地址';
 
   @override
-  String get mockAddressCopied => '已复制 Quick Mock 地址。';
-
-  @override
-  String get noDocumentationDraft => '尚未创建文档草稿';
-
-  @override
-  String get documentationDraftDescription => '发送请求后，可根据响应生成接口文档。';
-
-  @override
-  String get documentationDraft => '文档草稿';
-
-  @override
-  String get fromResponseSnapshot => '基于响应快照生成';
-
-  @override
-  String get tryIt => '试运行';
-
-  @override
-  String get copyApiReference => '复制 API 参考';
-
-  @override
-  String get apiReferenceCopied => '已复制 API 参考。';
-
-  @override
-  String get apiReference => 'API 参考';
+  String get mockAddressCopied => '已复制 Server 地址。';
 
   @override
   String get curlCopied => '已复制 cURL。';
@@ -615,14 +738,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get responseTitle => '响应';
 
   @override
-  String executionSnapshot(String environment) {
-    return '执行快照 · $environment';
-  }
-
-  @override
-  String get unknownEnvironment => '未知环境';
-
-  @override
   String get awaitingCurrentRequest => '等待发送当前请求';
 
   @override
@@ -632,16 +747,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pending => '待执行';
 
   @override
-  String get originalRequestDeleted => '原始请求已删除，无法回到编辑器。';
-
-  @override
   String get body => '正文';
 
   @override
   String get responseHeaders => '响应头';
-
-  @override
-  String get requestSnapshot => '请求快照';
 
   @override
   String get duration => '耗时';
@@ -656,19 +765,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadResponseBody => '下载响应正文';
 
   @override
-  String get generateDocumentation => '生成文档';
-
-  @override
-  String get createMock => '用响应创建 Quick Mock';
-
-  @override
-  String get replaceQuickMockTitle => '替换当前 Quick Mock？';
-
-  @override
-  String get replaceQuickMockMessage => '当前响应配置将被替换。';
-
-  @override
-  String get replaceQuickMock => '替换';
+  String get createMock => '从响应创建 Mock Server';
 
   @override
   String get responseBodyCopied => '已复制响应正文。';
@@ -697,6 +794,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rawView => '原始';
+
+  @override
+  String get expandJsonNode => '展开 JSON 节点';
+
+  @override
+  String get collapseJsonNode => '收起 JSON 节点';
 
   @override
   String responseLineCount(int count) {
@@ -876,9 +979,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get selectProtobufBeforeSending => '发送前请选择 Protobuf 架构和消息类型。';
 
   @override
-  String get sendWithShortcut => '按 Ctrl+Enter 发送';
-
-  @override
   String get messagePayload => '消息内容';
 
   @override
@@ -886,70 +986,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get protobufJsonPayload => '所选 Protobuf 消息类型的 JSON';
-
-  @override
-  String get executionHistory => '执行历史';
-
-  @override
-  String get latestRequestSnapshots => '最新请求快照';
-
-  @override
-  String historyExecutionCount(int count) {
-    return '共 $count 次执行';
-  }
-
-  @override
-  String get historyTimeline => '执行时间线';
-
-  @override
-  String get historyExecutionDetail => '执行详情';
-
-  @override
-  String get historyTotal => '总数';
-
-  @override
-  String get historyAll => '全部';
-
-  @override
-  String get historySuccess => '成功';
-
-  @override
-  String get historyFailed => '失败';
-
-  @override
-  String get historyEmpty => '暂无执行记录';
-
-  @override
-  String get historyNoSearchResults => '没有匹配的执行记录';
-
-  @override
-  String get clearHistory => '清除历史记录';
-
-  @override
-  String get clearHistoryTitle => '清除执行历史记录？';
-
-  @override
-  String get clearHistoryMessage => '这会移除当前会话中的全部执行记录。';
-
-  @override
-  String get historyCleared => '执行历史记录已清除。';
-
-  @override
-  String dashboardForEnvironment(String name) {
-    return '过去 24 小时，$name 工作区';
-  }
-
-  @override
-  String get quickStart => '快速开始';
-
-  @override
-  String get quickStartDescription => '新建草稿，或导入已有 API 定义。';
-
-  @override
-  String get requestVolume => '请求量';
-
-  @override
-  String get environmentHealth => '环境状态';
 
   @override
   String get active => '当前';
@@ -977,6 +1013,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get multipartFieldsDescription => '仅在接口需要时添加文本字段。';
 
   @override
+  String get formUrlEncodedFields => 'URL 编码字段';
+
+  @override
+  String get formUrlEncodedFieldsDescription =>
+      '以 application/x-www-form-urlencoded 发送字段。';
+
+  @override
   String get newCollection => '新建集合';
 
   @override
@@ -987,6 +1030,23 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get exportOpenApi => '导出 OpenAPI';
+
+  @override
+  String get exportApiDocumentation => '导出 API 文档...';
+
+  @override
+  String get selectDocumentationOutputDirectory => '选择 API 文档导出目录';
+
+  @override
+  String collectionDocumentationExported(String collectionName) {
+    return '$collectionName 的 API 文档已导出。';
+  }
+
+  @override
+  String get collectionDocumentationExportFailed => '无法导出 API 文档，请检查所选目录后重试。';
+
+  @override
+  String get collectionHasNoHttpRequests => '此 Collection 没有可生成文档的 HTTP 接口。';
 
   @override
   String get importOpenApiJson => '导入 OpenAPI JSON';
@@ -1021,6 +1081,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openExecutionSnapshot => '打开执行快照';
 
   @override
+  String get openOriginalRequest => '打开原始请求';
+
+  @override
   String get legacyExecutionNoSnapshot => '这条历史执行记录没有存储快照';
 
   @override
@@ -1052,7 +1115,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get collectionDeleted => '集合已删除。';
 
   @override
-  String get folderDeleted => '文件夹已删除。';
+  String get folderDeleted => '分组已删除。';
 
   @override
   String get requestDeleted => '请求已删除。';
@@ -1072,9 +1135,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String openApiExportedTo(String path) {
-    return 'OpenAPI 已导出到 $path。';
-  }
+  String get openApiExported => 'OpenAPI 已导出。';
 
   @override
   String openApiExportFailed(String error) {
@@ -1088,13 +1149,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get delete => '删除';
 
   @override
-  String get newFolder => '新建文件夹';
+  String get newFolder => '新建分组';
 
   @override
   String get renameCollection => '重命名集合';
 
   @override
-  String get renameFolder => '重命名文件夹';
+  String get renameFolder => '重命名分组';
 
   @override
   String get renameRequest => '重命名请求';
@@ -1103,7 +1164,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteCollection => '删除集合';
 
   @override
-  String get deleteFolder => '删除文件夹';
+  String get deleteFolder => '删除分组';
 
   @override
   String get deleteRequest => '删除请求';
@@ -1184,11 +1245,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get subprotocolsHint => 'graphql-transport-ws, events.v1';
 
   @override
-  String sendRequestWithShortcut(String shortcut) {
-    return '发送请求（$shortcut）';
-  }
-
-  @override
   String get fieldEnabled => '启用字段';
 
   @override
@@ -1254,6 +1310,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authorizationAppliedAsHeader => '独立认证配置';
 
   @override
+  String get httpAuthenticationDelivery => 'HTTP：每次请求的 Authorization 请求头';
+
+  @override
+  String get webSocketAuthenticationDelivery =>
+      'WebSocket：Upgrade 握手时的 Authorization 请求头';
+
+  @override
+  String get grpcAuthenticationDelivery =>
+      'gRPC：每次调用和流的 authorization metadata';
+
+  @override
   String get customAuthorizationConfigured => '此请求已配置自定义 Authorization 请求头。';
 
   @override
@@ -1261,6 +1328,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get edit => '编辑';
+
+  @override
+  String get preview => '预览';
 
   @override
   String get token => '令牌';
@@ -1278,16 +1348,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get originalRequestDeletedNotice => '原始请求已删除。';
 
   @override
-  String get mockServerStarted => 'Quick Mock 已启动。';
+  String get mockServerStarted => 'Mock Server 已启动。';
 
   @override
-  String get mockServerStopped => 'Quick Mock 已停止。';
+  String get mockServerStopped => 'Mock Server 已停止。';
 
   @override
-  String get mockServerStartFailed => '无法启动 Quick Mock，请重试。';
+  String get mockServerStartFailed => '无法启动 Mock Server，请重试。';
 
   @override
-  String get mockServerStopFailed => '无法停止 Quick Mock，请重试。';
+  String get mockServerStopFailed => '无法停止 Mock Server，请重试。';
 
   @override
   String get files => '文件';
@@ -1343,6 +1413,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String webSocketMessageSemantics(String direction, String kind, int bytes) {
     return '$direction$kind消息，$bytes 字节';
   }
+
+  @override
+  String get expandWebSocketMessage => '展开消息';
+
+  @override
+  String get collapseWebSocketMessage => '收起消息';
+
+  @override
+  String get openWebSocketMessageDetail => '放大查看消息';
 
   @override
   String byteCount(int count) {
@@ -1418,13 +1497,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get sendRequestBeforeMockDraft => '请先发送请求，再创建 Quick Mock。';
-
-  @override
-  String get sendRequestBeforeDocumentation => '请先发送一次请求再生成文档。';
-
-  @override
-  String get createMockDraftBeforeStartingServer => '请先创建 Quick Mock 再启动。';
+  String get sendRequestBeforeMockDraft => '请先发送 HTTP 请求，再创建 Mock Server。';
 
   @override
   String couldNotSendMessage(String error) {
@@ -1436,6 +1509,42 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get connectionFailed => '连接失败。';
+
+  @override
+  String get reconnectToApplyChanges => '重新连接后应用变更';
+
+  @override
+  String get restartToApplyChanges => '重新启动后应用变更';
+
+  @override
+  String get restartGrpcCall => '重新启动';
+
+  @override
+  String get webSocketAuthenticationFailed => '认证失败。请更新当前环境的令牌后重新连接。';
+
+  @override
+  String get grpcAuthenticationFailed => '认证失败。请更新当前环境的令牌后重新启动调用。';
+
+  @override
+  String grpcEnvironmentBearerAuthenticationFailed(String environmentName) {
+    return 'Bearer 认证失败。此调用使用环境“$environmentName”中的 Bearer 令牌。请切换到预期环境或更新该环境令牌，然后重新启动调用。';
+  }
+
+  @override
+  String get grpcRequestBearerAuthenticationFailed =>
+      'Bearer 认证失败。此调用使用请求中配置的 Bearer 令牌。请更新请求令牌，然后重新启动调用。';
+
+  @override
+  String get grpcApiKeyAuthenticationFailed =>
+      'API Key 认证失败。请更新请求中的 API Key 名称和值，然后重新启动调用。';
+
+  @override
+  String get grpcBasicAuthenticationFailed =>
+      'Basic 认证失败。请更新请求中的用户名和密码，然后重新启动调用。';
+
+  @override
+  String get grpcAuthenticationRequired =>
+      '此 gRPC 方法要求认证。请配置该方法所需的请求认证或环境认证，然后重新启动调用。';
 
   @override
   String couldNotImportProto(String error) {
@@ -1504,4 +1613,243 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get requestCancelled => '请求已取消。';
+
+  @override
+  String get notifications => '通知';
+
+  @override
+  String get closeNotifications => '关闭通知中心';
+
+  @override
+  String get noActionableNotifications => '没有需要处理的通知';
+
+  @override
+  String get noNotifications => '暂无通知';
+
+  @override
+  String get clearNotifications => '清空通知';
+
+  @override
+  String get clearNotificationsTitle => '清空通知？';
+
+  @override
+  String get clearNotificationsRecoveryMessage =>
+      '这会移除全部通知及其恢复入口，但不会更改底层资源或操作。';
+
+  @override
+  String get notificationsClearFailed => '无法清空通知，请重试。';
+
+  @override
+  String get acknowledgeNotification => '确认通知';
+
+  @override
+  String get notificationActionFailed => '操作失败';
+
+  @override
+  String get notificationActionPartiallyCompleted => '操作已部分完成';
+
+  @override
+  String get notificationSessionFailed => '会话失败';
+
+  @override
+  String get notificationSessionReconnecting => '会话正在重连';
+
+  @override
+  String get notificationSessionDisconnected => '会话已断开';
+
+  @override
+  String get notificationActionCompleted => '操作已完成';
+
+  @override
+  String get notificationReviewAndAcknowledge => '请查看该事件，并在不再需要时确认。';
+
+  @override
+  String get notificationSafeRecoveryAvailable => '可执行安全恢复操作。';
+
+  @override
+  String get retryStart => '重试启动';
+
+  @override
+  String get retryStop => '重试停止';
+
+  @override
+  String get retrySave => '重试保存';
+
+  @override
+  String get retryAction => '重试操作';
+
+  @override
+  String notificationsNeedAttention(int count) {
+    return '有 $count 条通知需要处理';
+  }
+
+  @override
+  String get savedMockServersTitle => '已保存的 Mock Server';
+
+  @override
+  String mockEndpointCount(int count) {
+    return '$count 个端点';
+  }
+
+  @override
+  String get serverName => 'Server 名称';
+
+  @override
+  String get copyServerUrl => '复制 Server URL';
+
+  @override
+  String get serverUrlCopied => '已复制 Server URL。';
+
+  @override
+  String get startServerBeforeCopyingUrl => '请先启动 Server，再复制其 URL。';
+
+  @override
+  String get openServerSource => '打开 Server 来源';
+
+  @override
+  String get mockServerActions => 'Mock Server 操作';
+
+  @override
+  String get openEndpointSource => '打开端点来源';
+
+  @override
+  String get openResponseSource => '打开响应来源';
+
+  @override
+  String get mockSourceUnavailable => '此 Mock 没有可用来源。';
+
+  @override
+  String get archiveServer => '归档 Server';
+
+  @override
+  String get deleteServer => '删除 Server';
+
+  @override
+  String get archivedServerCannotStart => '已归档的 Server 无法启动。';
+
+  @override
+  String get disabledServerCannotStart => '已停用的 Server 无法启动。';
+
+  @override
+  String get archivedServerCannotArchive => '已归档的 Server 无法再次归档。';
+
+  @override
+  String get discardMockEdits => '放弃未保存的 Mock Server 修改';
+
+  @override
+  String get noMockEditsToDiscard => '没有可放弃的 Mock Server 修改';
+
+  @override
+  String get discardMockChangesTitle => '放弃修改？';
+
+  @override
+  String get discardMockChangesMessage => '要放弃此 Mock Server 未保存的修改吗？';
+
+  @override
+  String get archiveMockWithUnsavedEdits => '未保存的修改将被放弃。要归档此 Server 吗？';
+
+  @override
+  String get archiveMockMessage => '要归档此 Server 并停止本地监听器吗？';
+
+  @override
+  String get deleteMockWithUnsavedEdits => '未保存的修改将被放弃。要删除此 Server 吗？';
+
+  @override
+  String get deleteMockMessage => '要删除此 Server 并停止本地监听器吗？';
+
+  @override
+  String get endpoints => '端点';
+
+  @override
+  String get addEndpoint => '添加端点';
+
+  @override
+  String get responseVariants => '响应变体';
+
+  @override
+  String get addVariant => '添加变体';
+
+  @override
+  String get defaultVariant => '默认';
+
+  @override
+  String get conditionalVariant => '条件匹配';
+
+  @override
+  String get delayMs => '延迟（毫秒）';
+
+  @override
+  String get removeVariant => '移除变体';
+
+  @override
+  String get matchesRequestHeader => '匹配请求 Header';
+
+  @override
+  String get headerName => 'Header 名称';
+
+  @override
+  String get headerValue => 'Header 值';
+
+  @override
+  String get serverStopped => 'Server 已停止';
+
+  @override
+  String get startSavedServer => '启动 Server';
+
+  @override
+  String get stopSavedServer => '停止 Server';
+
+  @override
+  String get sourceRequestUnavailable => '来源请求已不可用。';
+
+  @override
+  String get sourceResponseUnavailable => '来源响应快照已不可用。';
+
+  @override
+  String get mockServerSaved => 'Mock Server 已保存。';
+
+  @override
+  String get mockServerCreated => 'Mock Server 已创建。';
+
+  @override
+  String get mockServerCreateFailed => '无法创建 Mock Server，请重试。';
+
+  @override
+  String get mockServersLoadFailed => '无法载入已保存的 Mock Server。';
+
+  @override
+  String get protoSourceImportFailed => '无法导入 proto 源，请检查文件后重试。';
+
+  @override
+  String get descriptorSetImportFailed => '无法导入描述符集，请检查文件后重试。';
+
+  @override
+  String get grpcReflectionFailed => 'Server reflection 失败，请检查 endpoint 后重试。';
+
+  @override
+  String get mockServerSaveFailed => '无法保存 Mock Server，请重试。';
+
+  @override
+  String get mockServerStartedSaved => 'Mock Server 已启动。';
+
+  @override
+  String get mockServerStartSavedFailed => '无法启动 Mock Server，请重试。';
+
+  @override
+  String get mockServerStoppedSaved => 'Mock Server 已停止。';
+
+  @override
+  String get mockServerStopSavedFailed => '无法停止 Mock Server，请重试。';
+
+  @override
+  String get mockServerArchived => 'Mock Server 已归档。';
+
+  @override
+  String get mockServerArchiveFailed => '无法归档 Mock Server，请重试。';
+
+  @override
+  String get mockServerDeleted => 'Mock Server 已删除。';
+
+  @override
+  String get mockServerDeleteFailed => '无法删除 Mock Server，请重试。';
 }

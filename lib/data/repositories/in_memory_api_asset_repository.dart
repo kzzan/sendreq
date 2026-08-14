@@ -1,6 +1,8 @@
-import '../../domain/api_assets/api_asset_models.dart';
-import '../../domain/repositories/api_asset_repository.dart';
-import '../demo/demo_example_catalog.dart';
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/repositories/api_asset_repository.dart';
+import 'package:sendreq/data/demo/demo_example_catalog.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_request_tabs.dart';
+import 'package:sendreq/data/repositories/in_memory_api_asset_snapshot_cache.dart';
 
 /// 基于内存实现的 API 资产仓库。
 ///
@@ -11,9 +13,9 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
   InMemoryApiAssetRepository({
     required List<ApiCollection> collections,
     List<RequestTab> openTabs = const [],
-    this._activeRequestId,
+    String? activeRequestId,
   }) : _collections = List.of(collections),
-       _openTabs = List.of(openTabs);
+       _tabs = RequestTabState(openTabs, activeRequestId);
 
   /// 创建产品首次安装使用的唯一 Demo 集合。
   ///
@@ -37,37 +39,42 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
   /// 全部集合的原始数据。
   final List<ApiCollection> _collections;
 
-  /// 当前打开的全部请求选项卡。
-  final List<RequestTab> _openTabs;
+  /// 当前打开的请求标签及其活动状态。
+  final RequestTabState _tabs;
 
   /// 请求编辑产生的覆盖定义（按请求 ID 索引）。
   final Map<String, ApiRequestDefinition> _requestOverrides = {};
-
-  /// 当前活动请求的 ID。
-  String? _activeRequestId;
+  final InMemoryApiAssetSnapshotCache _snapshots =
+      InMemoryApiAssetSnapshotCache();
 
   /// 当前活动请求的 ID，无则返回 null。
   @override
-  String? get activeRequestId => _activeRequestId;
+  String? get activeRequestId => _tabs.activeRequestId;
+
+  @override
+  Future<void> flush() async {}
 
   /// 列出全部集合（叠加编辑覆盖后的只读快照）。
   @override
   List<ApiCollection> listCollections() =>
-      List.unmodifiable(_collections.map(_collectionWithOverrides));
+      _snapshots.collections(_collections, _requestOverrides);
 
   /// 将三层结构扁平化后的全部请求定义。
   @override
-  List<ApiRequestDefinition> listRequests() => [
-    // 将三层结构（集合 → 文件夹 → 请求）扁平化为请求列表。
-    for (final collection in listCollections())
-      for (final folder in collection.folders)
-        for (final request in folder.requests) request,
-  ];
+  List<ApiRequestDefinition> listRequests() =>
+      _snapshots.requests(_collections, _requestOverrides);
 
   /// 按 ID 获取请求定义，不存在时抛出异常。
   @override
-  ApiRequestDefinition getRequest(String requestId) =>
-      listRequests().firstWhere((request) => request.id == requestId);
+  ApiRequestDefinition getRequest(String requestId) {
+    final request = _snapshots.request(
+      requestId,
+      _collections,
+      _requestOverrides,
+    );
+    if (request == null) throw StateError('Request not found: $requestId');
+    return request;
+  }
 
   /// 新建一个空集合并返回，默认带一个"Requests"文件夹。
   @override
@@ -90,6 +97,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       ],
     );
     _collections.add(collection);
+    _invalidateSnapshots();
     return collection;
   }
 
@@ -110,18 +118,23 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
         for (final existing in _collections)
           for (final folder in existing.folders) folder.id,
       }),
-      name: 'New folder $count',
+      name: 'New group $count',
       requests: const [],
     );
     _collections[collectionIndex] = collection.copyWith(
       folders: [...collection.folders, folder],
     );
+    _invalidateSnapshots();
     return folder;
   }
 
   /// 新建请求定义并挂到指定集合/文件夹，未指定时自动选用或创建。
   @override
-  ApiRequestDefinition createRequest({String? collectionId, String? folderId}) {
+  ApiRequestDefinition createRequest({
+    String? collectionId,
+    String? folderId,
+    ApiRequestProtocol protocol = ApiRequestProtocol.http,
+  }) {
     // 未指定集合时退化为第一个集合；连集合都没有则先创建一个。
     final collection = collectionId == null
         ? (_collections.isEmpty ? createCollection() : _collections.first)
@@ -156,6 +169,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       queryParams: const [],
       headers: const [],
       bodyTemplate: '',
+      protocol: protocol,
       metadata: {'collectionName': collection.name, 'folderName': folder.name},
     );
     return _appendRequest(request);
@@ -204,6 +218,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     }
     final added = collection.copyWith(id: collectionId, folders: folders);
     _collections.add(added);
+    _invalidateSnapshots();
     return added;
   }
 
@@ -230,6 +245,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
           ),
       ],
     );
+    _invalidateSnapshots();
   }
 
   /// 删除集合及其全部请求、相关选项卡，并清理覆盖记录。
@@ -249,11 +265,8 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     for (final requestId in requestIds) {
       _requestOverrides.remove(requestId);
     }
-    _openTabs.removeWhere((tab) => requestIds.contains(tab.requestId));
-    // 若活动请求被删除，回退到最后打开的选项卡（没有则置空）。
-    if (_activeRequestId != null && requestIds.contains(_activeRequestId)) {
-      _activeRequestId = _openTabs.isEmpty ? null : _openTabs.last.requestId;
-    }
+    _tabs.removeRequests(requestIds);
+    _invalidateSnapshots();
   }
 
   /// 重命名文件夹并同步更新其中请求元数据里的文件夹名。
@@ -287,6 +300,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       ],
     );
     _collections[collectionIndex] = collection.copyWith(folders: folders);
+    _invalidateSnapshots();
   }
 
   /// 删除文件夹及其全部请求、相关选项卡，并清理覆盖记录。
@@ -313,11 +327,9 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     for (final requestId in requestIds) {
       _requestOverrides.remove(requestId);
     }
-    _openTabs.removeWhere((tab) => requestIds.contains(tab.requestId));
-    if (_activeRequestId != null && requestIds.contains(_activeRequestId)) {
-      _activeRequestId = _openTabs.isEmpty ? null : _openTabs.last.requestId;
-    }
+    _tabs.removeRequests(requestIds);
     _collections[collectionIndex] = collection.copyWith(folders: folders);
+    _invalidateSnapshots();
   }
 
   /// 重命名请求并同步更新对应选项卡的标题。
@@ -325,19 +337,8 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
   void renameRequest(String requestId, String name) {
     final request = getRequest(requestId);
     _requestOverrides[requestId] = request.copyWith(name: name);
-    // 同步更新所有指向该请求的选项卡标题，保持标签页显示一致。
-    for (var index = 0; index < _openTabs.length; index++) {
-      final tab = _openTabs[index];
-      if (tab.requestId == requestId) {
-        _openTabs[index] = RequestTab(
-          id: tab.id,
-          requestId: tab.requestId,
-          title: name,
-          openedAt: tab.openedAt,
-          isDirty: tab.isDirty,
-        );
-      }
-    }
+    _tabs.renameRequest(requestId, name);
+    _invalidateSnapshots();
   }
 
   /// 删除请求及其选项卡；删除活动请求时激活相邻选项卡。
@@ -364,16 +365,8 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     ];
     _collections[collectionIndex] = collection.copyWith(folders: folders);
     _requestOverrides.remove(requestId);
-    final tabIndex = _openTabs.indexWhere((tab) => tab.requestId == requestId);
-    if (tabIndex >= 0) {
-      _openTabs.removeAt(tabIndex);
-    }
-    // 若删除的是活动请求，则激活其左侧相邻选项卡（越界时收敛到首/尾）。
-    if (_activeRequestId == requestId) {
-      _activeRequestId = _openTabs.isEmpty
-          ? null
-          : _openTabs[(tabIndex - 1).clamp(0, _openTabs.length - 1)].requestId;
-    }
+    _tabs.removeRequest(requestId);
+    _invalidateSnapshots();
   }
 
   /// 批量导入请求定义到其所属的集合/文件夹。
@@ -390,71 +383,30 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     // 先校验请求确实存在，再写入覆盖映射。
     getRequest(request.id);
     _requestOverrides[request.id] = request;
+    _invalidateSnapshots();
   }
 
   /// 返回当前打开的全部选项卡（只读快照）。
   @override
-  List<RequestTab> listOpenTabs() => List.unmodifiable(_openTabs);
+  List<RequestTab> listOpenTabs() => _tabs.tabs;
 
   /// 打开请求的选项卡（已存在则复用），并设为活动状态。
   @override
   RequestTab openRequestTab(String requestId) {
     final request = getRequest(requestId);
-    // 已打开的选项卡直接复用，否则新建一个。
-    final existing = _openTabs.where((tab) => tab.requestId == requestId);
-    final tab = existing.isNotEmpty
-        ? existing.first
-        : RequestTab(
-            id: 'tab-${request.id}',
-            requestId: request.id,
-            title: request.name,
-            openedAt: DateTime.now().toUtc(),
-          );
-    if (existing.isEmpty) {
-      _openTabs.add(tab);
-    }
-    // 打开即视为激活。
-    _activeRequestId = requestId;
-    return tab;
+    return _tabs.open(request);
   }
 
   /// 激活指定选项卡。
   @override
   void activateRequestTab(String tabId) {
-    final tab = _openTabs.firstWhere((candidate) => candidate.id == tabId);
-    _activeRequestId = tab.requestId;
+    _tabs.activate(tabId);
   }
 
   /// 关闭指定选项卡；关闭活动选项卡时激活相邻选项卡。
   @override
   void closeRequestTab(String tabId) {
-    final index = _openTabs.indexWhere((tab) => tab.id == tabId);
-    if (index < 0) {
-      return;
-    }
-    final wasActive = _openTabs[index].requestId == _activeRequestId;
-    _openTabs.removeAt(index);
-    // 关闭的是活动选项卡时，激活其左侧相邻选项卡（为空则置空）。
-    if (wasActive) {
-      _activeRequestId = _openTabs.isEmpty
-          ? null
-          : _openTabs[(index - 1).clamp(0, _openTabs.length - 1)].requestId;
-    }
-  }
-
-  /// 在集合快照上叠加请求覆盖映射，返回反映最新编辑结果的视图。
-  ApiCollection _collectionWithOverrides(ApiCollection collection) {
-    return collection.copyWith(
-      folders: [
-        for (final folder in collection.folders)
-          folder.copyWith(
-            requests: [
-              for (final request in folder.requests)
-                _requestOverrides[request.id] ?? request,
-            ],
-          ),
-      ],
-    );
+    _tabs.close(tabId);
   }
 
   /// 将请求追加到其所属集合/文件夹中；集合或文件夹不存在时自动创建。
@@ -476,6 +428,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
         ],
       );
       _collections.add(collection);
+      _invalidateSnapshots();
       return request;
     }
 
@@ -514,6 +467,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       requests: [...folder.requests, added],
     );
     _collections[collectionIndex] = collection.copyWith(folders: folders);
+    _invalidateSnapshots();
     return added;
   }
 
@@ -522,8 +476,11 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
     final index = _collections.indexWhere((item) => item.id == collection.id);
     if (index >= 0) {
       _collections[index] = collection;
+      _invalidateSnapshots();
     }
   }
+
+  void _invalidateSnapshots() => _snapshots.invalidate();
 
   /// 生成唯一 ID：优先保留偏好 ID，已占用时附加递增的序号后缀。
   String _uniqueId(String preferred, Set<String> used) {

@@ -61,7 +61,7 @@ void main() {
       (variable) => variable.id == 'staging-base-url',
     );
     first.updateVariable(id: staging.id, value: ' https://staging.isolated ');
-    first.setActiveEnvironment('production');
+    await first.setActiveEnvironment('production');
     final production = first.listVariables().singleWhere(
       (variable) => variable.id == 'production-base-url',
     );
@@ -82,12 +82,42 @@ void main() {
       restored.resolveTemplate('{{baseUrl}}').executionValue,
       'https://production.isolated',
     );
-    restored.setActiveEnvironment('staging');
+    await restored.setActiveEnvironment('staging');
     expect(
       restored.resolveTemplate('{{baseUrl}}').executionValue,
       'https://staging.isolated',
     );
   });
+
+  test(
+    'Isar persists selection without committing configuration drafts',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'sendreq-env-selection-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final firstWorkspace = await IsarWorkspace.open(directory: directory);
+      final first = await IsarEnvironmentStore.load(workspace: firstWorkspace);
+      first.updateVariable(
+        id: 'staging-base-url',
+        value: 'https://unsaved.test',
+      );
+      await first.setActiveEnvironment('production');
+      await firstWorkspace.close();
+
+      final restoredWorkspace = await IsarWorkspace.open(directory: directory);
+      addTearDown(restoredWorkspace.close);
+      final restored = await IsarEnvironmentStore.load(
+        workspace: restoredWorkspace,
+      );
+      expect(restored.activeEnvironment.id, 'production');
+      await restored.setActiveEnvironment('staging');
+      expect(
+        restored.resolveTemplate('{{baseUrl}}').executionValue,
+        'https://staging.sendreq.io',
+      );
+    },
+  );
 
   test(
     'Isar environment store imports the legacy JSON once and keeps a backup',
@@ -99,7 +129,7 @@ void main() {
       final legacy = await FileEnvironmentStore.load(
         configurationDirectory: directory,
       );
-      legacy.setActiveEnvironment('reurl-production');
+      await legacy.setActiveEnvironment('reurl-production');
       legacy.updateVariable(id: 'reurl-ip', value: '8.8.8.8');
       await legacy.saveChanges();
 

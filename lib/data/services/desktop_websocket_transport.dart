@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../../domain/websocket/websocket_transport.dart';
+import 'package:sendreq/domain/websocket/websocket_transport.dart';
 
 /// 桌面端 WebSocket 传输实现，底层基于 dart:io 的 WebSocket。
 class DesktopWebSocketTransport implements WebSocketTransport {
@@ -44,10 +44,8 @@ class _DesktopWebSocketConnection implements WebSocketConnection {
       onError: (dynamic error) =>
           _events.add(WebSocketTransportEvent.error('$error')),
       onDone: () => _events.add(
-        // 连接关闭时附带关闭码，供上层判断是否为优雅关闭。
-        WebSocketTransportEvent.closed(
-          _socket.closeCode == null ? null : 'Closed (${_socket.closeCode}).',
-        ),
+        // 保留服务端 close code 与 reason；会话投影在展示或持久化前脱敏。
+        WebSocketTransportEvent.closed(_closeMessage(_socket)),
       ),
     );
   }
@@ -83,5 +81,13 @@ class _DesktopWebSocketConnection implements WebSocketConnection {
     await _socket.close();
     await _subscription.cancel();
     await _events.close();
+  }
+
+  static String? _closeMessage(WebSocket socket) {
+    final code = socket.closeCode;
+    final reason = socket.closeReason;
+    if (code == null && (reason == null || reason.isEmpty)) return null;
+    if (reason == null || reason.isEmpty) return 'Closed ($code).';
+    return code == null ? 'Closed: $reason' : 'Closed ($code): $reason';
   }
 }
