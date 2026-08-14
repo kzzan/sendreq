@@ -27,14 +27,10 @@ sendreq 的当前产品表面只有 Requests、Mock 和 Settings。Collection �
 - Mock 只能从当前 HTTP 安全快照创建，创建后不依赖来源 Request，且不支持 WebSocket/gRPC 模拟。
 - Secret、token、Cookie、API Key、Basic 密码和环境解析值不得进入结果、时间线、Mock、通知或可见错误。
 
-## 协议验收
-
-统一示例和本地协议服务说明见 [local-protocol-testing.md](local-protocol-testing.md)。服务端权威契约位于 [SERVER_CAPABILITIES.md](../../SERVER_CAPABILITIES.md)。
-
 ```bash
 flutter analyze
 flutter test
 flutter build linux
 ```
 
-修改跨模块流程后必须同时更新 OpenSpec、README、协议手册和相关测试。
+修改跨模块流程后必须同时更新 OpenSpec、README 和相关测试。

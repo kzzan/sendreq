@@ -1150,16 +1150,6 @@ void main() {
     },
   );
 
-  test('opening a gRPC request starts on the message composer', () {
-    final viewModel = workspaceViewModel(
-      assetRepository: InMemoryApiAssetRepository.demo(),
-    );
-
-    viewModel.selectRequest('demo-grpc-order-chat');
-
-    expect(viewModel.activeRequestTab, 'Body');
-  });
-
   // 场景：保存请求时，multipart 的表单字段、批量文件名与文件大小等信息应完整保留。
   test('multipart file selections survive saving the request', () {
     final repository = InMemoryApiAssetRepository.demo();

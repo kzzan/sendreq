@@ -140,7 +140,7 @@ void main() {
           authenticationSource: RequestAuthenticationSource.environment,
           redactedEndpoint: 'http://127.0.0.1:50051',
           schemaSource: GrpcSchemaSource.reflection,
-          serviceName: '.order.v1.OrderService',
+          serviceName: '.example.v1.ExampleService',
           methodName: 'Chat',
           rpcShape: GrpcRpcShape.bidirectionalStreaming,
           useTls: false,

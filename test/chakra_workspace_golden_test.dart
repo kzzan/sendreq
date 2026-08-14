@@ -32,6 +32,13 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
+            await tester.runAsync(
+              () => precacheImage(
+                const AssetImage('assets/branding/sendreq-app-icon.png'),
+                tester.element(find.byType(WorkspaceView)),
+              ),
+            );
+            await tester.pumpAndSettle();
 
             if (tool != _GoldenTool.requests) {
               await tester.tap(

@@ -46,7 +46,6 @@ void main() {
 
       expect(source, contains('"openapi": "3.0.3"'));
       expect(source, contains('"summary": "List users"'));
-      expect(source, isNot(contains('demo-websocket-echo')));
     },
   );
 }

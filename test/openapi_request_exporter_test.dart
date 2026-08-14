@@ -12,7 +12,7 @@ void main() {
     final requests = InMemoryApiAssetRepository.demo().listRequests();
     final source = const OpenApiRequestExporter().export(
       requests: requests,
-      title: 'Sendreq Demo Example API',
+      title: 'Sendreq REST Example API',
     );
     final document = jsonDecode(source) as Map<String, dynamic>;
     final paths = document['paths'] as Map<String, dynamic>;
@@ -22,7 +22,7 @@ void main() {
     expect(document['openapi'], '3.0.3');
     expect(
       (document['info'] as Map<String, dynamic>)['title'],
-      'Sendreq Demo Example API',
+      'Sendreq REST Example API',
     );
     expect((document['servers'] as List).single, {
       'url': 'http://127.0.0.1:8081',

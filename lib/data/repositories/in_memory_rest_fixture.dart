@@ -1,0 +1,115 @@
+import 'package:sendreq/domain/api_assets/api_asset_models.dart';
+import 'package:sendreq/domain/authentication/request_authentication.dart';
+
+/// REST-only data for in-memory interaction and widget tests.
+abstract final class InMemoryRestFixture {
+  static const collection = ApiCollection(
+    id: 'collection-sendreq-demo',
+    name: 'Sendreq REST Example',
+    folders: [
+      ApiFolder(
+        id: 'folder-demo-rest',
+        name: 'REST',
+        requests: [
+          ApiRequestDefinition(
+            id: 'demo-rest-list-users',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'List users',
+            method: 'GET',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/users',
+            queryParams: [
+              ApiField(key: 'page', value: '1'),
+              ApiField(key: 'limit', value: '20'),
+            ],
+            headers: [],
+            bodyTemplate: '',
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+          ApiRequestDefinition(
+            id: 'demo-rest-create-user',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'Create user',
+            method: 'POST',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/basic/users',
+            queryParams: [],
+            headers: [ApiField(key: 'Content-Type', value: 'application/json')],
+            bodyTemplate:
+                '{"name":"Grace Hopper","email":"grace@example.test"}',
+            authentication: RequestAuthentication.basic(
+              username: 'sendreq',
+              password: 'basic-demo-password',
+            ),
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+          ApiRequestDefinition(
+            id: 'demo-rest-replace-user',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'Replace user 1',
+            method: 'PUT',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/bearer/users/1',
+            queryParams: [],
+            headers: [ApiField(key: 'Content-Type', value: 'application/json')],
+            bodyTemplate: '{"name":"Ada Byron","email":"ada@example.test"}',
+            authentication: RequestAuthentication.bearer('test-bearer-token'),
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+          ApiRequestDefinition(
+            id: 'demo-rest-patch-user',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'Patch user 1',
+            method: 'PATCH',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/basic/users/1',
+            queryParams: [],
+            headers: [ApiField(key: 'Content-Type', value: 'application/json')],
+            bodyTemplate: '{"name":"Ada Lovelace"}',
+            authentication: RequestAuthentication.basic(
+              username: 'sendreq',
+              password: 'basic-demo-password',
+            ),
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+          ApiRequestDefinition(
+            id: 'demo-rest-delete-user',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'Delete user 1',
+            method: 'DELETE',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/bearer/users/1',
+            queryParams: [],
+            headers: [],
+            bodyTemplate: '',
+            authentication: RequestAuthentication.bearer('test-bearer-token'),
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+          ApiRequestDefinition(
+            id: 'demo-rest-api-key-users',
+            collectionId: 'collection-sendreq-demo',
+            folderId: 'folder-demo-rest',
+            name: 'API key users',
+            method: 'GET',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/api-key/users',
+            queryParams: [],
+            headers: [],
+            bodyTemplate: '',
+            authentication: RequestAuthentication.apiKey(
+              apiKeyName: 'X-API-Key',
+              apiKeyValue: 'test-api-key',
+              apiKeyLocation: ApiKeyLocation.header,
+            ),
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+        ],
+      ),
+    ],
+  );
+}

@@ -37,16 +37,4 @@ void main() {
     expect(saved.bodyTemplate, '{"name":"Ada"}');
     expect(saved.authentication.bearerToken, 'request-token');
   });
-
-  test('WebSocket composer payload is normalized before send', () {
-    final viewModel = workspaceViewModel();
-    viewModel.selectRequest('demo-websocket-echo');
-
-    viewModel.updateActiveWebSocketMessage('  sendreq websocket demo  ');
-
-    expect(
-      viewModel.activeWebSocketMessageDraft.payload,
-      'sendreq websocket demo',
-    );
-  });
 }

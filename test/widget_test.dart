@@ -155,11 +155,7 @@ void main() {
     final filteredPills = tester.widgetList<RequestKindPill>(
       find.descendant(of: collection, matching: find.byType(RequestKindPill)),
     );
-    expect(filteredPills, isNotEmpty);
-    expect(
-      filteredPills.every((pill) => pill.protocol == ApiRequestProtocol.grpc),
-      isTrue,
-    );
+    expect(filteredPills, isEmpty);
     expect(
       tester
           .widget<TextFormField>(
@@ -181,7 +177,7 @@ void main() {
         )
         .map((pill) => pill.protocol)
         .toSet();
-    expect(allProtocols, containsAll(ApiRequestProtocol.values));
+    expect(allProtocols, {ApiRequestProtocol.http});
   });
 
   testWidgets('Environment manage uses a stage on narrow Requests', (
@@ -256,13 +252,13 @@ void main() {
       expect(find.text('正文'), findsNothing);
       // 右键集合节点弹出上下文菜单，点击“删除”以触发中文删除确认弹窗。
       await tester.tapAt(
-        tester.getCenter(find.text('Sendreq Demo Example')),
+        tester.getCenter(find.text('Sendreq REST Example')),
         buttons: kSecondaryMouseButton,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('删除'));
       await tester.pumpAndSettle();
-      expect(find.text('删除 Sendreq Demo Example 及其 15 个请求？'), findsOneWidget);
+      expect(find.text('删除 Sendreq REST Example 及其 6 个请求？'), findsOneWidget);
     },
   );
 
@@ -1411,7 +1407,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(TextButton, 'Collections'));
     await tester.pump();
-    expect(find.text('Sendreq Demo Example'), findsOneWidget);
+    expect(find.text('Sendreq REST Example'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(TextButton, 'Request'));
     await tester.pump();
@@ -1449,7 +1445,7 @@ void main() {
     }
     await tester.tap(collectionsTab);
     await tester.pumpAndSettle();
-    expect(find.text('Sendreq Demo Example'), findsOneWidget);
+    expect(find.text('Sendreq REST Example'), findsOneWidget);
   });
 
   testWidgets(
@@ -1651,11 +1647,11 @@ void main() {
     await tester.pump();
     expect(find.text('Create user'), findsNothing);
 
-    await tester.tap(find.text('Sendreq Demo Example').first);
+    await tester.tap(find.text('Sendreq REST Example').first);
     await tester.pump();
     expect(restFolder, findsNothing);
 
-    await tester.tap(find.text('Sendreq Demo Example').first);
+    await tester.tap(find.text('Sendreq REST Example').first);
     await tester.pump();
     expect(restFolder, findsOneWidget);
   });
@@ -1712,7 +1708,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Sendreq Demo Example').first),
+      tester.getCenter(find.text('Sendreq REST Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1743,7 +1739,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Sendreq Demo Example').first),
+      tester.getCenter(find.text('Sendreq REST Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
@@ -1752,7 +1748,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sendreq Demo Example'), findsNothing);
+    expect(find.text('Sendreq REST Example'), findsNothing);
     expect(find.text('Collections'), findsWidgets);
     expect(find.text('No requests yet'), findsOneWidget);
 
@@ -1798,18 +1794,10 @@ void main() {
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Sendreq Demo Example'), findsOneWidget);
+    expect(find.text('Sendreq REST Example'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('collection-folder-folder-demo-rest')),
       findsNothing,
-    );
-    expect(
-      find.byKey(const ValueKey('collection-folder-folder-demo-websocket')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('collection-folder-folder-demo-grpc')),
-      findsOneWidget,
     );
   });
 
@@ -1827,14 +1815,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tapAt(
-      tester.getCenter(find.text('Sendreq Demo Example').first),
+      tester.getCenter(find.text('Sendreq REST Example').first),
       buttons: kSecondaryMouseButton,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('New group'));
     await tester.pumpAndSettle();
 
-    expect(find.text('New group 4'), findsOneWidget);
+    expect(find.text('New group 2'), findsOneWidget);
   });
 
   // 场景：请求带未保存修改时删除，应先弹窗让用户明确选择保存后删除。
@@ -2776,7 +2764,7 @@ class _FlushRecordingApiAssetRepository extends InMemoryApiAssetRepository {
   factory _FlushRecordingApiAssetRepository.demo() {
     const requestId = 'demo-rest-list-users';
     return _FlushRecordingApiAssetRepository(
-      collections: const [DemoExampleCatalog.protocolTestCollection],
+      collections: const [DemoExampleCatalog.collection],
       openTabs: [
         RequestTab(
           id: 'tab-$requestId',

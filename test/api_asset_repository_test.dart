@@ -66,7 +66,7 @@ void main() {
       );
       final original = base.copyWith(
         grpc: GrpcRequestConfiguration(
-          serviceName: '.order.v1.OrderService',
+          serviceName: '.example.v1.ExampleService',
           methodName: 'Chat',
           useTls: false,
           rpcShape: shape,
@@ -96,7 +96,7 @@ void main() {
       'bodyTemplate': '{}',
       'protocol': 'grpc',
       'grpc': <String, dynamic>{
-        'serviceName': '.order.v1.OrderService',
+        'serviceName': '.example.v1.ExampleService',
         'methodName': 'WatchOrders',
         'useTls': false,
         'serverStreaming': true,
@@ -202,7 +202,7 @@ void main() {
     expect(request.folderId, 'folder-demo-rest');
     expect(repository.getRequest(request.id).urlTemplate, isEmpty);
     expect(request.authentication.type, RequestAuthenticationType.none);
-    expect(repository.listRequests(), hasLength(16));
+    expect(repository.listRequests(), hasLength(7));
   });
 
   test('Demo REST request keeps its localhost endpoint and query input', () {
@@ -218,17 +218,13 @@ void main() {
     );
   });
 
-  test(
-    'Demo collection includes HTTP, WebSocket and gRPC as independent requests',
-    () {
-      final repository = InMemoryApiAssetRepository.demo();
-      final protocols = repository.listRequests().map((item) => item.protocol);
+  test('in-memory fixture contains REST requests only', () {
+    final protocols = InMemoryApiAssetRepository.demo().listRequests().map(
+      (item) => item.protocol,
+    );
 
-      expect(protocols, contains(ApiRequestProtocol.http));
-      expect(protocols, contains(ApiRequestProtocol.webSocket));
-      expect(protocols, contains(ApiRequestProtocol.grpc));
-    },
-  );
+    expect(protocols, everyElement(ApiRequestProtocol.http));
+  });
 
   // 验证集合/文件夹可重命名，且新建的文件夹与请求能被精确地定向到指定集合。
   test('collections and folders can be renamed and targeted', () {
@@ -253,7 +249,7 @@ void main() {
     expect(collection.id, 'collection-sendreq-demo');
     expect(collection.name, 'Protocol APIs');
     expect(collection.folders.first.name, 'Auth');
-    expect(folder.name, 'New group 4');
+    expect(folder.name, 'New group 2');
     expect(request.folderId, folder.id);
     expect(collection.folders.last.requests.single.id, request.id);
   });
@@ -279,7 +275,15 @@ void main() {
   // 验证只删除某个文件夹时，仅该文件夹内的请求受影响，其余文件夹保持完整。
   test('deleting a folder clears its requests tabs and active request', () {
     final repository = InMemoryApiAssetRepository.demo();
+    final siblingFolder = repository.createFolder(
+      collectionId: 'collection-sendreq-demo',
+    );
+    final siblingRequest = repository.createRequest(
+      collectionId: 'collection-sendreq-demo',
+      folderId: siblingFolder.id,
+    );
 
+    repository.openRequestTab(siblingRequest.id);
     repository.openRequestTab('demo-rest-create-user');
     repository.deleteFolder(
       collectionId: 'collection-sendreq-demo',
@@ -292,17 +296,14 @@ void main() {
       collection.folders.map((folder) => folder.id),
       isNot(contains('folder-demo-rest')),
     );
-    expect(repository.listOpenTabs(), isEmpty);
-    expect(repository.activeRequestId, isNull);
-    // REST 文件夹请求已删除，其他协议请求仍然可用。
+    expect(repository.listOpenTabs(), hasLength(1));
+    expect(repository.activeRequestId, siblingRequest.id);
+    // 目标分组内请求已删除，同一集合的兄弟分组与请求仍然可用。
     expect(
       () => repository.getRequest('demo-rest-list-users'),
       throwsStateError,
     );
-    expect(
-      repository.getRequest('demo-websocket-echo').id,
-      'demo-websocket-echo',
-    );
+    expect(repository.getRequest(siblingRequest.id).id, siblingRequest.id);
   });
 
   // 验证重命名与删除只作用于目标请求，不影响同级请求；删除活动请求后会自动选中相邻标签。
@@ -324,7 +325,7 @@ void main() {
       collection.folders.map((folder) => folder.id),
       contains('folder-demo-rest'),
     );
-    expect(repository.listRequests(), hasLength(14));
+    expect(repository.listRequests(), hasLength(5));
     expect(repository.activeRequestId, 'demo-rest-list-users');
   });
 

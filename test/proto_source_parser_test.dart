@@ -60,52 +60,16 @@ void main() {
 
   test('resolves same-package message fields to fully qualified names', () {
     final descriptor = const ProtoSourceParser().parse(
-      entryPath: 'orders.proto',
+      entryPath: 'messages.proto',
       sources: const {
-        'orders.proto':
-            'syntax = "proto3"; package order.v1; message Order { string id = 1; } message Response { Order order = 1; }',
+        'messages.proto':
+            'syntax = "proto3"; package example.v1; message Item { string id = 1; } message Response { Item item = 1; }',
       },
     );
 
     expect(
-      descriptor.message('.order.v1.Response')!.fields.single.typeName,
-      '.order.v1.Order',
+      descriptor.message('.example.v1.Response')!.fields.single.typeName,
+      '.example.v1.Item',
     );
-  });
-
-  test('parses the repository gRPC protocol fixture', () async {
-    final descriptor = await const ProtoSourceParser().parseFile(
-      'assets/demo/order.proto',
-    );
-
-    expect(descriptor.message('.order.v1.CreateOrderRequest'), isNotNull);
-    expect(
-      descriptor
-          .service('.order.v1.OrderService')!
-          .methods
-          .map((item) => item.name),
-      ['GetOrder', 'CreateOrder', 'SubmitOrders', 'Chat', 'WatchOrders'],
-    );
-    final createOrder = descriptor.message('.order.v1.CreateOrderRequest')!;
-    expect(
-      createOrder.fields.singleWhere((field) => field.name == 'priority').type,
-      14,
-    );
-    expect(
-      createOrder.fields
-          .singleWhere((field) => field.name == 'attributes')
-          .mapEntry,
-      isTrue,
-    );
-    expect(createOrder.oneofs, ['fulfilment']);
-    final chat = descriptor.service('.order.v1.OrderService')!.methods[3];
-    expect(chat.clientStreaming, isTrue);
-    expect(chat.serverStreaming, isTrue);
-    final watchOrders = descriptor
-        .service('.order.v1.OrderService')!
-        .methods
-        .last;
-    expect(watchOrders.clientStreaming, isFalse);
-    expect(watchOrders.serverStreaming, isTrue);
   });
 }

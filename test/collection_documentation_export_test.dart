@@ -58,13 +58,11 @@ void main() {
       final openApi = jsonDecode(renderer.source!) as Map<String, dynamic>;
       final encoded = jsonEncode(openApi);
       expect(openApi['openapi'], '3.0.3');
-      expect((openApi['info'] as Map)['title'], 'Sendreq Demo Example');
+      expect((openApi['info'] as Map)['title'], 'Sendreq REST Example');
       expect(encoded, contains('/current'));
       expect(encoded, isNot(contains('other.example.test')));
-      expect(encoded, isNot(contains('demo-websocket-echo')));
-      expect(encoded, isNot(contains('demo-grpc-order-list')));
       expect(file.request!.outputDirectory, '/chosen/directory');
-      expect(file.request!.collectionName, 'Sendreq Demo Example');
+      expect(file.request!.collectionName, 'Sendreq REST Example');
       expect(file.request!.source, '# rendered');
       expect(renderer.languageCode, 'zh');
       expect(result.fileName, 'safe-name.md');

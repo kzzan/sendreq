@@ -95,7 +95,7 @@ WorkspaceViewModel workspaceViewModel({
     userNoticeRepository:
         userNoticeRepository ?? InMemoryUserNoticeRepository(),
     preferenceStore: preferenceStore ?? InMemoryWorkspacePreferenceStore(),
-    demoCollection: DemoExampleCatalog.protocolTestCollection,
+    demoCollection: DemoExampleCatalog.collection,
     initialPreferences: initialPreferences,
   );
 }
@@ -128,5 +128,5 @@ WorkspaceDependencies workspaceTestDependencies({
   environmentStore: environmentStore ?? InMemoryEnvironmentStore.sample(),
   mockServerRepository: mockServerRepository ?? InMemoryMockServerRepository(),
   userNoticeRepository: userNoticeRepository ?? InMemoryUserNoticeRepository(),
-  demoCollection: DemoExampleCatalog.protocolTestCollection,
+  demoCollection: DemoExampleCatalog.collection,
 );

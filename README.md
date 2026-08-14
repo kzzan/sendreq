@@ -4,6 +4,8 @@ sendreq 是面向开发与测试人员的本地优先桌面 API 工具。产品�
 
 > sendreq is a local-first desktop API tool with three focused workspaces: Requests, HTTP Mock, and Settings.
 
+![sendreq Requests 工作区](docs/images/sendreq-requests.png)
+
 ## 核心工作流
 
 - 在 Requests 中使用 Collection、Folder 和 Request 组织接口资产。
@@ -40,9 +42,7 @@ sendreq 是面向开发与测试人员的本地优先桌面 API 工具。产品�
 
 ## 内置示例
 
-**Sendreq Demo Example** 是唯一内置示例集合，包含 6 个 REST、4 个 WebSocket 和 5 个 gRPC Request。gRPC 示例覆盖公开、API Key、Basic、Bearer 以及四种 RPC 形态。
-
-本地 REST、WebSocket 与 gRPC 服务的启动和验收见 [本地协议测试](docs/local-protocol-testing.md)，端点与认证契约以 [SERVER_CAPABILITIES.md](../SERVER_CAPABILITIES.md) 为准。
+**Sendreq REST Example** 是唯一可加载示例集合，只包含一个 REST `GET` Request。首次启动保持空白工作区，不自动写入示例数据；WebSocket、gRPC 与 Protobuf 测试资源不会随示例或安装包分发。
 
 ## 本地开发
 

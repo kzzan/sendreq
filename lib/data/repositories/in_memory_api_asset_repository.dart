@@ -1,8 +1,8 @@
 import 'package:sendreq/domain/api_assets/api_asset_models.dart';
 import 'package:sendreq/domain/repositories/api_asset_repository.dart';
-import 'package:sendreq/data/demo/demo_example_catalog.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_request_tabs.dart';
 import 'package:sendreq/data/repositories/in_memory_api_asset_snapshot_cache.dart';
+import 'package:sendreq/data/repositories/in_memory_rest_fixture.dart';
 
 /// 基于内存实现的 API 资产仓库。
 ///
@@ -17,9 +17,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
   }) : _collections = List.of(collections),
        _tabs = RequestTabState(openTabs, activeRequestId);
 
-  /// 创建测试使用的完整多协议集合。
-  ///
-  /// 正式启动不会调用该工厂；产品内的可选示例由组合根单独注入。
+  /// 创建只包含 REST 请求的内存交互测试仓库。
   factory InMemoryApiAssetRepository.demo() {
     const initialRequestId = 'demo-rest-list-users';
     final initialTab = RequestTab(
@@ -29,7 +27,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       openedAt: DateTime.utc(2026, 8, 8),
     );
     return InMemoryApiAssetRepository(
-      collections: const [DemoExampleCatalog.protocolTestCollection],
+      collections: const [InMemoryRestFixture.collection],
       openTabs: [initialTab],
       activeRequestId: initialRequestId,
     );
