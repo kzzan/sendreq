@@ -17,10 +17,9 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
   }) : _collections = List.of(collections),
        _tabs = RequestTabState(openTabs, activeRequestId);
 
-  /// 创建产品首次安装使用的唯一 Demo 集合。
+  /// 创建测试使用的完整多协议集合。
   ///
-  /// 演示包含本地 REST CRUD、WebSocket 与 gRPC 请求；其余旧样本不进入
-  /// 生产启动路径，避免用户首次看到与产品定位无关的接口集合。
+  /// 正式启动不会调用该工厂；产品内的可选示例由组合根单独注入。
   factory InMemoryApiAssetRepository.demo() {
     const initialRequestId = 'demo-rest-list-users';
     final initialTab = RequestTab(
@@ -30,7 +29,7 @@ class InMemoryApiAssetRepository implements ApiAssetRepository {
       openedAt: DateTime.utc(2026, 8, 8),
     );
     return InMemoryApiAssetRepository(
-      collections: const [DemoExampleCatalog.collection],
+      collections: const [DemoExampleCatalog.protocolTestCollection],
       openTabs: [initialTab],
       activeRequestId: initialRequestId,
     );

@@ -20,7 +20,7 @@ class FileApiAssetRepository implements ApiAssetRepository {
   /// 串行写盘队列，保证多次变更按顺序落盘。
   Future<void> _writeQueue = Future.value();
 
-  /// 加载资产仓库：优先从 JSON 文件恢复，任何失败都回退到示例数据。
+  /// 加载资产仓库：优先从 JSON 文件恢复，任何失败都回退到空工作区。
   static Future<FileApiAssetRepository> load({
     Directory? configurationDirectory,
   }) async {
@@ -29,9 +29,9 @@ class FileApiAssetRepository implements ApiAssetRepository {
         configurationDirectory: configurationDirectory,
       );
     } on Object {
-      // 读取或解析失败时回退到示例数据，保证应用能够启动。
+      // 读取或解析失败时回退到空工作区，避免测试数据进入用户存储。
       return FileApiAssetRepository._(
-        InMemoryApiAssetRepository.demo(),
+        InMemoryApiAssetRepository(collections: const []),
         configurationDirectory: configurationDirectory,
       );
     }
@@ -39,7 +39,7 @@ class FileApiAssetRepository implements ApiAssetRepository {
 
   /// 严格读取旧 JSON，供启动迁移编排判断是否应展示恢复入口。
   ///
-  /// 文件不存在时仍返回新的示例工作区；存在但损坏的数据必须由调用方处理，
+  /// 文件不存在时返回新的空工作区；存在但损坏的数据必须由调用方处理，
   /// 不能静默覆盖为示例数据。
   static Future<FileApiAssetRepository> loadForMigration({
     Directory? configurationDirectory,
@@ -47,7 +47,7 @@ class FileApiAssetRepository implements ApiAssetRepository {
     final file = _fileFor(configurationDirectory);
     if (!await file.exists()) {
       return FileApiAssetRepository._(
-        InMemoryApiAssetRepository.demo(),
+        InMemoryApiAssetRepository(collections: const []),
         configurationDirectory: configurationDirectory,
       );
     }

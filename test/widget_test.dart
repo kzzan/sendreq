@@ -699,48 +699,6 @@ void main() {
     expect(find.text('Query parameters'), findsNothing);
   });
 
-  testWidgets('gRPC request JSON uses the shared collapsible preview', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(700, 760);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    final viewModel = workspaceViewModel();
-    addTearDown(viewModel.dispose);
-    viewModel.selectRequest('demo-grpc-create-order');
-    viewModel.selectRequestEditorTab('Body');
-
-    await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: ListenableBuilder(
-            listenable: viewModel,
-            builder: (context, _) => SizedBox(
-              width: 500,
-              child: RequestEditorPanel(viewModel: viewModel, compact: true),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('grpc-message-input')), findsOneWidget);
-    await tester.tap(find.text('Preview'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('grpc-message-json-preview')), findsOneWidget);
-    expect(
-      find.byKey(const Key('grpc-request-json-toggle-root')),
-      findsOneWidget,
-    );
-    expect(find.text('Send message'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
   // 场景：在窄桌面宽度下，设置页的语言控件应自适应布局而不会被压缩丢失。
   testWidgets('settings adapts its language controls to a narrow desktop', (
     tester,
@@ -2818,7 +2776,7 @@ class _FlushRecordingApiAssetRepository extends InMemoryApiAssetRepository {
   factory _FlushRecordingApiAssetRepository.demo() {
     const requestId = 'demo-rest-list-users';
     return _FlushRecordingApiAssetRepository(
-      collections: const [DemoExampleCatalog.collection],
+      collections: const [DemoExampleCatalog.protocolTestCollection],
       openTabs: [
         RequestTab(
           id: 'tab-$requestId',

@@ -13,14 +13,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'shipped order proto exactly matches the authoritative server asset',
+    'repository order proto fixture matches the authoritative server schema',
     () async {
       final authoritative = await File(
         '../go-grpc/proto/order.proto',
       ).readAsString();
-      final shipped = await File('assets/demo/order.proto').readAsString();
+      final fixture = await File('assets/demo/order.proto').readAsString();
 
-      expect(shipped, authoritative);
+      expect(fixture, authoritative);
     },
   );
 
@@ -92,7 +92,7 @@ void main() {
 }
 
 Map<String, ApiRequestDefinition> _requestsById() => {
-  for (final folder in DemoExampleCatalog.collection.folders)
+  for (final folder in DemoExampleCatalog.protocolTestCollection.folders)
     for (final request in folder.requests) request.id: request,
 };
 

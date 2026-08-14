@@ -14,23 +14,27 @@ void main() {
         configurationDirectory: directory,
       );
 
-      await store.setActiveEnvironment('reurl-production');
-      store.updateVariable(id: 'reurl-token', value: 'test-persisted-token');
-      store.updateVariable(id: 'reurl-ip', value: '8.8.8.8');
+      final production = store.createEnvironment('Production');
+      final baseUrl = store.listVariables().singleWhere(
+        (variable) => variable.key == 'baseUrl',
+      );
+      store.updateVariable(id: baseUrl.id, value: 'https://api.example.test');
       store.updateActiveAuthentication(
         const RequestAuthentication.bearer('{{token}}'),
       );
+      final token = store.listVariables().singleWhere(
+        (variable) => variable.key == 'token',
+      );
+      store.updateVariable(id: token.id, value: 'test-persisted-token');
       await store.saveChanges();
 
       final restored = await FileEnvironmentStore.load(
         configurationDirectory: directory,
       );
-      expect(restored.activeEnvironment.id, 'reurl-production');
+      expect(restored.activeEnvironment.id, production.id);
       expect(
-        restored
-            .resolveTemplate('https://example.test?ip={{ip}}')
-            .executionValue,
-        'https://example.test?ip=8.8.8.8',
+        restored.resolveTemplate('{{baseUrl}}').executionValue,
+        'https://api.example.test',
       );
       expect(
         restored.resolveTemplate('Bearer {{token}}').executionValue,
@@ -42,7 +46,7 @@ void main() {
   );
 
   test(
-    'malformed persisted environments fall back to safe sample data',
+    'malformed persisted environments fall back to clean default data',
     () async {
       final directory = await Directory.systemTemp.createTemp('sendreq-env-');
       addTearDown(() => directory.delete(recursive: true));
@@ -54,8 +58,15 @@ void main() {
         configurationDirectory: directory,
       );
 
-      expect(store.activeEnvironment.id, 'staging');
-      expect(store.listEnvironments(), isNotEmpty);
+      expect(store.activeEnvironment.id, 'default');
+      expect(store.listEnvironments(), hasLength(1));
+      expect(
+        store
+            .listVariables()
+            .singleWhere((item) => item.key == 'baseUrl')
+            .displayValue,
+        isEmpty,
+      );
     },
   );
 
@@ -67,21 +78,30 @@ void main() {
       final store = await FileEnvironmentStore.load(
         configurationDirectory: directory,
       );
+      final defaultBaseUrl = store.listVariables().singleWhere(
+        (variable) => variable.key == 'baseUrl',
+      );
+      final production = store.createEnvironment('Production');
+      await store.saveChanges();
+      await store.setActiveEnvironment('default');
       store.updateVariable(
-        id: 'staging-base-url',
+        id: defaultBaseUrl.id,
         value: 'https://unsaved.test',
       );
 
-      await store.setActiveEnvironment('production');
+      await store.setActiveEnvironment(production.id);
 
       final restored = await FileEnvironmentStore.load(
         configurationDirectory: directory,
       );
-      expect(restored.activeEnvironment.id, 'production');
-      await restored.setActiveEnvironment('staging');
+      expect(restored.activeEnvironment.id, production.id);
+      await restored.setActiveEnvironment('default');
       expect(
-        restored.resolveTemplate('{{baseUrl}}').executionValue,
-        'https://staging.sendreq.io',
+        restored
+            .listVariables()
+            .singleWhere((item) => item.key == 'baseUrl')
+            .displayValue,
+        isEmpty,
       );
       expect(store.hasUnsavedChanges, isTrue);
     },

@@ -7,6 +7,23 @@ import 'package:sendreq/domain/repositories/environment_store.dart';
 class InMemoryEnvironmentStore implements EnvironmentStore {
   InMemoryEnvironmentStore._(this._state);
 
+  /// Creates the clean workspace required by a first production launch.
+  factory InMemoryEnvironmentStore.defaults() => InMemoryEnvironmentStore._(
+    EnvironmentStoreState.fromJson(const <String, dynamic>{
+      'profiles': [
+        {
+          'id': 'default',
+          'workspaceId': 'workspace-main',
+          'name': 'Default',
+          'authentication': {'type': 'none'},
+        },
+      ],
+      'activeEnvironmentId': 'default',
+      'globalVariables': [],
+      'variablesByEnvironment': {'default': []},
+    }),
+  );
+
   /// 构造带预置环境的示例存储。
   factory InMemoryEnvironmentStore.sample() =>
       InMemoryEnvironmentStore._(EnvironmentStoreState.sample());

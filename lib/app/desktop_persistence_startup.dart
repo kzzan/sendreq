@@ -120,7 +120,7 @@ class DesktopPersistenceStartup {
     ),
     // Isar 不可用时使用内存回退；旧 JSON 仅作为 Isar 首次迁移来源，
     // 不再成为跨平台运行时的第二套可写存储。
-    loadEnvironmentStore: () async => InMemoryEnvironmentStore.sample(),
+    loadEnvironmentStore: () async => InMemoryEnvironmentStore.defaults(),
   );
 
   /// 创建偏好存储的工厂。

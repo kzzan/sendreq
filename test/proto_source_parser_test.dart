@@ -73,9 +73,9 @@ void main() {
     );
   });
 
-  test('parses the installed gRPC demo schema asset', () async {
+  test('parses the repository gRPC protocol fixture', () async {
     final descriptor = await const ProtoSourceParser().parseFile(
-      'asset://assets/demo/order.proto',
+      'assets/demo/order.proto',
     );
 
     expect(descriptor.message('.order.v1.CreateOrderRequest'), isNotNull);

@@ -71,8 +71,6 @@ flutter:
 
   assets:
     - assets/branding/sendreq-app-icon.png
-    - assets/demo/order.proto
-    - assets/demo/order.pb
 
   fonts:
     - family: Noto Sans

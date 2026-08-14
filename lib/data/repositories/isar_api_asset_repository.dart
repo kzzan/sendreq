@@ -25,7 +25,7 @@ class IsarApiAssetRepository implements ApiAssetRepository {
   /// 串行写盘队列，保证多次变更按顺序落盘。
   Future<void> _writeQueue = Future.value();
 
-  /// 从 Isar 加载仓库；无文档时从旧 JSON 仓库（或示例数据）初始化并首次落盘。
+  /// 从 Isar 加载仓库；无文档时从旧 JSON 仓库（或空工作区）初始化并首次落盘。
   static Future<IsarApiAssetRepository> load({
     required IsarWorkspace workspace,
     FileApiAssetRepository? legacyRepository,
@@ -43,7 +43,7 @@ class IsarApiAssetRepository implements ApiAssetRepository {
     }
 
     final delegate = legacyRepository == null
-        ? InMemoryApiAssetRepository.demo()
+        ? InMemoryApiAssetRepository(collections: const [])
         : InMemoryApiAssetRepository(
             collections: legacyRepository.listCollections(),
             openTabs: legacyRepository.listOpenTabs(),

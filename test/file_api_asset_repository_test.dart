@@ -14,6 +14,7 @@ void main() {
       final repository = await FileApiAssetRepository.load(
         configurationDirectory: directory,
       );
+      expect(repository.listCollections(), isEmpty);
 
       final collection = repository.createCollection();
       final request = repository.createRequest(collectionId: collection.id);
@@ -33,14 +34,19 @@ void main() {
     },
   );
 
-  test('file API asset repository falls back for malformed data', () async {
-    final directory = await Directory.systemTemp.createTemp('sendreq-assets-');
-    addTearDown(() => directory.delete(recursive: true));
-    await File('${directory.path}/api-assets.json').writeAsString('not json');
+  test(
+    'file API asset repository falls back empty for malformed data',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'sendreq-assets-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      await File('${directory.path}/api-assets.json').writeAsString('not json');
 
-    final repository = await FileApiAssetRepository.load(
-      configurationDirectory: directory,
-    );
-    expect(repository.listRequests(), isNotEmpty);
-  });
+      final repository = await FileApiAssetRepository.load(
+        configurationDirectory: directory,
+      );
+      expect(repository.listRequests(), isEmpty);
+    },
+  );
 }

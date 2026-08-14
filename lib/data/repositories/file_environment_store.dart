@@ -26,7 +26,7 @@ class FileEnvironmentStore implements EnvironmentStore {
 
   Future<void> _writeQueue = Future<void>.value();
 
-  /// 加载环境存储：优先读取 JSON 文件，缺失或损坏时回退到示例数据。
+  /// 加载环境存储：优先读取 JSON 文件，缺失或损坏时回退到干净默认值。
   static Future<FileEnvironmentStore> load({
     Directory? configurationDirectory,
   }) async {
@@ -35,11 +35,11 @@ class FileEnvironmentStore implements EnvironmentStore {
         configurationDirectory: configurationDirectory,
       );
     } on Object {
-      // 环境配置损坏不能阻止应用启动；保留示例配置并让用户重新保存。
+      // 环境配置损坏不能阻止应用启动；使用无示例凭据的默认配置。
       final directory =
           configurationDirectory ?? await getApplicationSupportDirectory();
       return FileEnvironmentStore._(
-        InMemoryEnvironmentStore.sample(),
+        InMemoryEnvironmentStore.defaults(),
         configurationDirectory: directory,
       );
     }
@@ -60,7 +60,7 @@ class FileEnvironmentStore implements EnvironmentStore {
     );
     if (source == null) {
       return FileEnvironmentStore._(
-        InMemoryEnvironmentStore.sample(),
+        InMemoryEnvironmentStore.defaults(),
         configurationDirectory: directory,
       );
     }

@@ -21,6 +21,7 @@ void main() {
       final first = await IsarApiAssetRepository.load(
         workspace: firstWorkspace,
       );
+      expect(first.listCollections(), isEmpty);
       final collection = first.createCollection();
       final request = first.createRequest(collectionId: collection.id);
       first.renameRequest(request.id, 'Persisted through Isar');
@@ -85,7 +86,11 @@ void main() {
     final repository = await IsarApiAssetRepository.load(
       workspace: firstWorkspace,
     );
+    final collection = repository.createCollection();
+    final request = repository.createRequest(collectionId: collection.id);
+    repository.openRequestTab(request.id);
     final viewModel = workspaceViewModel(assetRepository: repository);
+    viewModel.selectRequest(request.id);
     viewModel.updateActiveDraftUrl('https://durable.example.test/users');
 
     await viewModel.saveActiveRequestDurably();
@@ -98,7 +103,7 @@ void main() {
       workspace: secondWorkspace,
     );
     expect(
-      restored.getRequest('demo-rest-list-users').urlTemplate,
+      restored.getRequest(request.id).urlTemplate,
       'https://durable.example.test/users',
     );
   });

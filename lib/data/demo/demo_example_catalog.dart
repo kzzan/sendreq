@@ -2,13 +2,43 @@ import 'package:sendreq/domain/api_assets/api_asset_models.dart';
 import 'package:sendreq/domain/authentication/request_authentication.dart';
 import 'package:sendreq/domain/grpc/grpc_rpc_shape.dart';
 
-/// 产品随安装包提供的协议示例，不会在加载时覆盖用户已有集合。
+/// 产品提供的可选示例，不会在加载时覆盖用户已有集合。
 abstract final class DemoExampleCatalog {
   /// 示例集合的稳定 ID；重复加载时由仓储生成冲突安全的新 ID。
   static const collectionId = 'collection-sendreq-demo';
 
-  /// REST CRUD、WebSocket、gRPC 请求均为独立请求类型。
+  /// 正式产品只提供一个最小 REST 示例，不携带协议测试 schema。
   static const collection = ApiCollection(
+    id: collectionId,
+    name: 'Sendreq REST Example',
+    folders: [
+      ApiFolder(
+        id: 'folder-demo-rest',
+        name: 'REST',
+        requests: [
+          ApiRequestDefinition(
+            id: 'demo-rest-list-users',
+            collectionId: collectionId,
+            folderId: 'folder-demo-rest',
+            name: 'List users',
+            method: 'GET',
+            urlTemplate: 'http://127.0.0.1:8081/api/v1/users',
+            queryParams: [
+              ApiField(key: 'page', value: '1'),
+              ApiField(key: 'limit', value: '20'),
+            ],
+            headers: [],
+            bodyTemplate: '',
+            authenticationSource: RequestAuthenticationSource.request,
+            metadata: {'folderName': 'REST'},
+          ),
+        ],
+      ),
+    ],
+  );
+
+  /// 多协议数据仅供自动化测试使用，不进入用户加载的正式示例。
+  static const protocolTestCollection = ApiCollection(
     id: collectionId,
     name: 'Sendreq Demo Example',
     folders: [
@@ -208,7 +238,7 @@ abstract final class DemoExampleCatalog {
             protocol: ApiRequestProtocol.grpc,
             grpc: GrpcRequestConfiguration(
               protoSchema: ProtobufSchemaReference(
-                path: 'asset://assets/demo/order.proto',
+                path: 'assets/demo/order.proto',
                 fingerprint: 'sendreq-demo-order-v5',
               ),
               serviceName: '.order.v1.OrderService',
@@ -236,7 +266,7 @@ abstract final class DemoExampleCatalog {
             protocol: ApiRequestProtocol.grpc,
             grpc: GrpcRequestConfiguration(
               protoSchema: ProtobufSchemaReference(
-                path: 'asset://assets/demo/order.proto',
+                path: 'assets/demo/order.proto',
                 fingerprint: 'sendreq-demo-order-v5',
               ),
               serviceName: '.order.v1.OrderService',
@@ -264,7 +294,7 @@ abstract final class DemoExampleCatalog {
             protocol: ApiRequestProtocol.grpc,
             grpc: GrpcRequestConfiguration(
               protoSchema: ProtobufSchemaReference(
-                path: 'asset://assets/demo/order.proto',
+                path: 'assets/demo/order.proto',
                 fingerprint: 'sendreq-demo-order-v5',
               ),
               serviceName: '.order.v1.OrderService',
@@ -289,7 +319,7 @@ abstract final class DemoExampleCatalog {
             protocol: ApiRequestProtocol.grpc,
             grpc: GrpcRequestConfiguration(
               protoSchema: ProtobufSchemaReference(
-                path: 'asset://assets/demo/order.proto',
+                path: 'assets/demo/order.proto',
                 fingerprint: 'sendreq-demo-order-v5',
               ),
               serviceName: '.order.v1.OrderService',
@@ -313,7 +343,7 @@ abstract final class DemoExampleCatalog {
             protocol: ApiRequestProtocol.grpc,
             grpc: GrpcRequestConfiguration(
               protoSchema: ProtobufSchemaReference(
-                path: 'asset://assets/demo/order.proto',
+                path: 'assets/demo/order.proto',
                 fingerprint: 'sendreq-demo-order-v5',
               ),
               serviceName: '.order.v1.OrderService',

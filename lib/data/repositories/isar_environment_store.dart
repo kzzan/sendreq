@@ -45,7 +45,7 @@ class IsarEnvironmentStore implements EnvironmentStore {
     }
 
     final delegate = legacyStore == null
-        ? InMemoryEnvironmentStore.sample()
+        ? InMemoryEnvironmentStore.defaults()
         : InMemoryEnvironmentStore.fromJson(
             Map<String, dynamic>.from(legacyStore.exportSnapshot()),
           );

@@ -57,13 +57,16 @@ void main() {
     final firstWorkspace = await IsarWorkspace.open(directory: directory);
     final first = await IsarEnvironmentStore.load(workspace: firstWorkspace);
 
-    final staging = first.listVariables().singleWhere(
-      (variable) => variable.id == 'staging-base-url',
+    final defaultBaseUrl = first.listVariables().singleWhere(
+      (variable) => variable.key == 'baseUrl',
     );
-    first.updateVariable(id: staging.id, value: ' https://staging.isolated ');
-    await first.setActiveEnvironment('production');
+    first.updateVariable(
+      id: defaultBaseUrl.id,
+      value: ' https://default.isolated ',
+    );
+    final productionEnvironment = first.createEnvironment('Production');
     final production = first.listVariables().singleWhere(
-      (variable) => variable.id == 'production-base-url',
+      (variable) => variable.key == 'baseUrl',
     );
     first.updateVariable(
       id: production.id,
@@ -78,14 +81,15 @@ void main() {
       workspace: restoredWorkspace,
     );
 
+    expect(restored.activeEnvironment.id, productionEnvironment.id);
     expect(
       restored.resolveTemplate('{{baseUrl}}').executionValue,
       'https://production.isolated',
     );
-    await restored.setActiveEnvironment('staging');
+    await restored.setActiveEnvironment('default');
     expect(
       restored.resolveTemplate('{{baseUrl}}').executionValue,
-      'https://staging.isolated',
+      'https://default.isolated',
     );
   });
 
@@ -98,11 +102,17 @@ void main() {
       addTearDown(() => directory.delete(recursive: true));
       final firstWorkspace = await IsarWorkspace.open(directory: directory);
       final first = await IsarEnvironmentStore.load(workspace: firstWorkspace);
+      final defaultBaseUrl = first.listVariables().singleWhere(
+        (variable) => variable.key == 'baseUrl',
+      );
+      final production = first.createEnvironment('Production');
+      await first.saveChanges();
+      await first.setActiveEnvironment('default');
       first.updateVariable(
-        id: 'staging-base-url',
+        id: defaultBaseUrl.id,
         value: 'https://unsaved.test',
       );
-      await first.setActiveEnvironment('production');
+      await first.setActiveEnvironment(production.id);
       await firstWorkspace.close();
 
       final restoredWorkspace = await IsarWorkspace.open(directory: directory);
@@ -110,11 +120,14 @@ void main() {
       final restored = await IsarEnvironmentStore.load(
         workspace: restoredWorkspace,
       );
-      expect(restored.activeEnvironment.id, 'production');
-      await restored.setActiveEnvironment('staging');
+      expect(restored.activeEnvironment.id, production.id);
+      await restored.setActiveEnvironment('default');
       expect(
-        restored.resolveTemplate('{{baseUrl}}').executionValue,
-        'https://staging.sendreq.io',
+        restored
+            .listVariables()
+            .singleWhere((item) => item.key == 'baseUrl')
+            .displayValue,
+        isEmpty,
       );
     },
   );
@@ -129,8 +142,11 @@ void main() {
       final legacy = await FileEnvironmentStore.load(
         configurationDirectory: directory,
       );
-      await legacy.setActiveEnvironment('reurl-production');
-      legacy.updateVariable(id: 'reurl-ip', value: '8.8.8.8');
+      final migratedEnvironment = legacy.createEnvironment('Legacy');
+      final baseUrl = legacy.listVariables().singleWhere(
+        (variable) => variable.key == 'baseUrl',
+      );
+      legacy.updateVariable(id: baseUrl.id, value: 'https://legacy.test');
       await legacy.saveChanges();
 
       final workspace = await IsarWorkspace.open(directory: directory);
@@ -140,8 +156,11 @@ void main() {
         legacyStore: legacy,
       );
 
-      expect(migrated.activeEnvironment.id, 'reurl-production');
-      expect(migrated.resolveTemplate('{{ip}}').executionValue, '8.8.8.8');
+      expect(migrated.activeEnvironment.id, migratedEnvironment.id);
+      expect(
+        migrated.resolveTemplate('{{baseUrl}}').executionValue,
+        'https://legacy.test',
+      );
       expect(
         await directory.list().any((item) => item.path.endsWith('.bak')),
         isTrue,

@@ -36,7 +36,7 @@ abstract final class ProtocolServerContract {
   static const webSocketEndpoint = 'ws://127.0.0.1:8080';
   static const grpcEndpoint = 'http://127.0.0.1:50051';
   static const grpcService = '.order.v1.OrderService';
-  static const protoAsset = 'asset://assets/demo/order.proto';
+  static const protoAsset = 'assets/demo/order.proto';
 
   static const basicUsername = 'sendreq';
   static const basicPassword = 'basic-demo-password';

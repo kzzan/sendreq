@@ -99,7 +99,7 @@ WorkspaceViewModel _workspaceViewModel() {
     grpcExecutionService: GrpcExecutionService(const DesktopGrpcTransport()),
     contractPublishingService: FakeContractPublishingService(),
     userNoticeRepository: InMemoryUserNoticeRepository(),
-    demoCollection: DemoExampleCatalog.collection,
+    demoCollection: DemoExampleCatalog.protocolTestCollection,
   );
 }
 
